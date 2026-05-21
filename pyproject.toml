@@ -13,10 +13,22 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "pd-book-tools",
     "pydantic>=2.5",
-    "python-doctr",
-    "torch",
     "tomli>=2.0",
     "tomli-w>=1.0",
+]
+
+# The heavy training stack (torch / DocTR / matplotlib) is optional. The base
+# install is torch-free so a downstream web process (e.g. pd-ocr-trainer-spa)
+# can import the typed config models and the ITrainingRunner Protocol without
+# pulling multi-GB ML deps. Install `pd-ocr-training[train]` to get the full
+# LocalTrainingRunner / DocTR training stack.
+[project.optional-dependencies]
+train = [
+    "python-doctr",
+    "torch",
+    "torchvision",
+    "matplotlib",
+    "numpy",
 ]
 
 [project.scripts]
@@ -34,7 +46,13 @@ packages = ["pd_ocr_training"]
 pd-book-tools = { git = "https://github.com/ConcaveTrillion/pd-book-tools.git" }
 
 [dependency-groups]
+# The dev group installs the `train` extra so the full test suite (which
+# exercises LocalTrainingRunner / detect.py / recog.py) and basedpyright run
+# against the real torch/DocTR stack. The torch-free import contract is
+# verified separately by tests/test_torch_free_import.py, which runs a
+# subprocess with torch hidden from sys.modules.
 dev = [
+    "pd-ocr-training[train]",
     "basedpyright>=1.39.4",
     "gitlint>=0.19.1",
     "pre-commit>=4.2.0",

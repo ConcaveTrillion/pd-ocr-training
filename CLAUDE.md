@@ -9,6 +9,26 @@ suite. Extracted from the legacy `pd-ocr-trainer` repo.
 other `pd-*` SPA backend torch-free. Only the future `pd-ocr-trainer-spa`
 depends on this package.
 
+## Install modes — torch is an optional extra
+
+`torch` / `python-doctr` / `matplotlib` are **not** in `[project.dependencies]`.
+They live in the `train` optional extra. This lets `pd-ocr-trainer-spa`'s
+long-lived web process import the torch-free half (config models + Protocol)
+without dragging multi-GB torch into the web process.
+
+```bash
+pip install pd-ocr-training            # base — torch-free
+pip install 'pd-ocr-training[train]'   # full training stack
+```
+
+The base install exposes `DetectionConfig`, `RecognitionConfig`,
+`TrainingEvent`, `ITrainingRunner`. `LocalTrainingRunner` is exported lazily
+via `__init__.__getattr__` — `import pd_ocr_training` never imports torch, and
+accessing `LocalTrainingRunner` without the `[train]` extra raises a helpful
+`ImportError`. The `dev` dependency-group pulls in `[train]` so `make ci`
+exercises the full stack; the torch-free contract is covered separately by
+`tests/test_torch_free_import.py` (subprocess with torch hidden).
+
 ## Package layout
 
 ```text
