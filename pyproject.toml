@@ -154,8 +154,12 @@ known-first-party = ["pd_ocr_training"]
 # BLE/S also suppressed: broad-except and bandit patterns are pre-existing debt in the verbatim-moved code.
 "pd_ocr_training/utils.py" = ["ANN", "D", "BLE", "S"]
 "pd_ocr_training/datasets.py" = ["ANN", "D", "BLE", "S"]
-"pd_ocr_training/detect.py" = ["ANN", "D", "BLE", "S"]
-"pd_ocr_training/recog.py" = ["ANN", "D", "BLE", "S"]
+# Extra families added during Task 4 verbatim-move: PLW2901 (loop-var overwrite
+# is idiomatic GPU tensor reassignment), RET506/RET504 (cosmetic return style),
+# PLW1508 (os.environ.get integer defaults), LOG015 (root logger calls),
+# PLW0603 (global statement for shared step counter). All pre-existing debt.
+"pd_ocr_training/detect.py" = ["ANN", "D", "BLE", "S", "PLW2901", "RET506", "PLW1508", "LOG015", "PLW0603", "RET504"]
+"pd_ocr_training/recog.py" = ["ANN", "D", "BLE", "S", "PLW2901", "RET506", "PLW1508", "LOG015", "PLW0603", "RET504"]
 
 [tool.basedpyright]
 include = ["pd_ocr_training", "tests"]
@@ -192,4 +196,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 filterwarnings = [
     "error",
+    # defusedxml ships a DeprecationWarning on its cElementTree alias; it's a
+    # transitive dep (doctr → lxml → defusedxml) that we cannot fix upstream.
+    "ignore::DeprecationWarning:defusedxml",
 ]
