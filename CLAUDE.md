@@ -22,11 +22,15 @@ pip install 'pd-ocr-training[train]'   # full training stack
 ```
 
 The base install exposes `DetectionConfig`, `RecognitionConfig`,
-`TrainingEvent`, `ITrainingRunner`. `LocalTrainingRunner` is exported lazily
-via `__init__.__getattr__` — `import pd_ocr_training` never imports torch, and
-accessing `LocalTrainingRunner` without the `[train]` extra raises a helpful
-`ImportError`. The `dev` dependency-group pulls in `[train]` so `make ci`
-exercises the full stack; the torch-free contract is covered separately by
+`TrainingEvent`, `ITrainingRunner`, `IEvalRunner`, all eval config models
+(`DetectionEvalConfig`, `RecognitionEvalConfig`), result models (`EvalSlice`,
+`DetectionEvalResult`, `RecognitionEvalResult`), and `LocalEvalRunner`.
+`LocalTrainingRunner` is exported lazily via `__init__.__getattr__` — `import
+pd_ocr_training` never imports torch. Accessing `LocalTrainingRunner` without
+the `[train]` extra raises a helpful `ImportError`. `LocalEvalRunner` is
+torch-free (its stub impl raises `NotImplementedError`) and importable without
+the extra. The `dev` dependency-group pulls in `[train]` so `make ci` exercises
+the full stack; the torch-free contract is covered separately by
 `tests/test_torch_free_import.py` (subprocess with torch hidden).
 
 ## Package layout
@@ -34,8 +38,9 @@ exercises the full stack; the torch-free contract is covered separately by
 ```text
 pd_ocr_training/
     __init__.py      # Public API re-exports
-    protocols.py     # ITrainingRunner Protocol + TrainingEvent / DetectionConfig / RecognitionConfig
+    protocols.py     # ITrainingRunner + IEvalRunner Protocols; all config + result models
     local.py         # LocalTrainingRunner — callback→iterator bridge (strict-lint-compliant)
+    local_eval.py    # LocalEvalRunner — synchronous eval wrapper (strict-lint-compliant)
     detect.py        # Verbatim-moved DocTR detection training (legacy; per-file-ignores active)
     recog.py         # Verbatim-moved DocTR recognition training (legacy; per-file-ignores active)
     datasets.py      # ExportManager (legacy; per-file-ignores active)
@@ -44,8 +49,8 @@ pd_ocr_training/
 
 `detect.py`, `recog.py`, `datasets.py`, and `utils.py` are verbatim moves from
 the legacy repo. They carry `ANN`, `D`, `BLE`, and `S` per-file-ignores in
-`pyproject.toml` pending an annotation follow-up pass. `protocols.py` and
-`local.py` are new, strict-lint-compliant code.
+`pyproject.toml` pending an annotation follow-up pass. `protocols.py`,
+`local.py`, and `local_eval.py` are new, strict-lint-compliant code.
 
 ## Ops-style contract
 

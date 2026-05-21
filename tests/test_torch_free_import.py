@@ -68,8 +68,14 @@ def test_torch_free_public_names_importable() -> None:
         """
         from pd_ocr_training import (
             DetectionConfig,
+            DetectionEvalConfig,
+            DetectionEvalResult,
+            EvalSlice,
+            IEvalRunner,
             ITrainingRunner,
             RecognitionConfig,
+            RecognitionEvalConfig,
+            RecognitionEvalResult,
             TrainingEvent,
         )
 
@@ -77,7 +83,15 @@ def test_torch_free_public_names_importable() -> None:
         cfg = DetectionConfig(train_path="data/train", val_path="data/val")
         assert str(cfg.train_path) == "data/train"
         assert hasattr(ITrainingRunner, "train_detection")
+        assert hasattr(IEvalRunner, "evaluate_detection")
+        assert hasattr(IEvalRunner, "evaluate_recognition")
         assert RecognitionConfig is not None and TrainingEvent is not None
+        eval_cfg = DetectionEvalConfig(val_path="data/val", model_path="model.pt")
+        assert eval_cfg.arch == "db_resnet50"
+        assert RecognitionEvalConfig is not None
+        assert EvalSlice is not None
+        assert DetectionEvalResult is not None
+        assert RecognitionEvalResult is not None
         print("OK")
         """
     )
@@ -104,8 +118,38 @@ def test_local_runner_access_raises_helpful_error_without_torch() -> None:
     assert "OK" in result.stdout
 
 
+def test_local_eval_runner_importable_without_torch() -> None:
+    """LocalEvalRunner resolves without torch -- its stub impl is torch-free.
+
+    Unlike ``LocalTrainingRunner`` (which imports ``detect.py``/``recog.py``
+    and therefore torch/DocTR), ``LocalEvalRunner`` only imports from
+    ``protocols.py``.  The stub entry points raise ``NotImplementedError``
+    rather than requiring torch.  This means the class can be imported in a
+    base install; the real eval implementation is a follow-up task.
+    """
+    result = _run(
+        """
+        import pd_ocr_training
+
+        runner_cls = pd_ocr_training.LocalEvalRunner
+        assert runner_cls is not None, "LocalEvalRunner should be importable without torch"
+        assert "torch" not in sys.modules, "torch was imported by LocalEvalRunner"
+        print("OK")
+        """
+    )
+    assert result.returncode == 0, result.stderr
+    assert "OK" in result.stdout
+
+
 def test_local_runner_importable_with_train_stack() -> None:
     """With the [train] extra installed, LocalTrainingRunner resolves normally."""
     from pd_ocr_training import LocalTrainingRunner
 
     assert LocalTrainingRunner is not None
+
+
+def test_local_eval_runner_importable_with_train_stack() -> None:
+    """With the [train] extra installed, LocalEvalRunner resolves normally."""
+    from pd_ocr_training import LocalEvalRunner
+
+    assert LocalEvalRunner is not None

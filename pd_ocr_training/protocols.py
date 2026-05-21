@@ -1,11 +1,25 @@
-"""Training runner Protocol and supporting data models for pd-ocr-training.
+"""Training and evaluation runner Protocols and supporting data models for pd-ocr-training.
 
 Design rationale
 ----------------
-The ``ITrainingRunner`` Protocol mirrors the workspace idiom established in
-``pd-ocr-ops`` (see ``pd_ocr_ops.gpu.protocols``): a ``@runtime_checkable``
-``Protocol`` defines the contract; a ``Local*`` implementation ships
-separately (Task 6) so consumer apps depend only on the interface.
+The ``ITrainingRunner`` and ``IEvalRunner`` Protocols mirror the workspace idiom
+established in ``pd-ocr-ops`` (see ``pd_ocr_ops.gpu.protocols``): a
+``@runtime_checkable`` ``Protocol`` defines the contract; a ``Local*``
+implementation ships separately so consumer apps depend only on the interface.
+
+Two-Protocol design (ITrainingRunner + IEvalRunner)
+----------------------------------------------------
+Training and evaluation are separate concerns with different call shapes:
+
+- ``ITrainingRunner`` returns ``Iterator[TrainingEvent]`` — training is a
+  long-running job that streams progress events over many epochs.
+- ``IEvalRunner`` returns a result object synchronously — eval is a single
+  forward pass with no epoch loop, so the callback->iterator bridge is
+  unnecessary overhead.
+
+Keeping them separate follows the Single-Responsibility Principle and mirrors
+the multi-Protocol pattern used in ``pd-ocr-ops``
+(``StageDispatcher`` / ``LongJobRunner``).
 
 Config-type decision
 --------------------
@@ -242,5 +256,233 @@ class ITrainingRunner(Protocol):
         Yields:
             ``TrainingEvent`` objects during training; the final event has
             ``kind="done"`` on success or ``kind="error"`` on failure.
+        """
+        ...
+
+
+# ---------------------------------------------------------------------------
+# Eval config models
+# ---------------------------------------------------------------------------
+
+
+class DetectionEvalConfig(BaseModel):
+    """Configuration for a detection evaluation run.
+
+    Attributes:
+        val_path: Path to the validation data folder (must contain
+            ``images/`` and ``labels.json``).
+        model_path: Path to the trained model checkpoint file.
+        arch: DocTR detection architecture name, e.g. ``"db_resnet50"``.
+        batch_size: Evaluation batch size.
+        input_size: Square input image size in pixels (height == width).
+        rotation: Whether the model was trained with rotated bounding-box
+            polygons (used to select the correct decode path).
+        workers: Number of DataLoader worker processes.
+        amp: Enable PyTorch Automatic Mixed Precision for inference.
+        device: GPU device index; ``None`` selects the default device.
+    """
+
+    val_path: str | Path
+    model_path: str | Path
+    arch: str = "db_resnet50"
+    batch_size: int = 2
+    input_size: int = 1024
+    rotation: bool = False
+    workers: int = 4
+    amp: bool = False
+    device: int | None = None
+
+
+class RecognitionEvalConfig(BaseModel):
+    """Configuration for a recognition evaluation run.
+
+    Attributes:
+        val_path: Path to the validation data folder.
+        model_path: Path to the trained model checkpoint file.
+        arch: DocTR recognition architecture name, e.g. ``"crnn_vgg16_bn"``.
+        batch_size: Evaluation batch size.
+        input_size: Input image height in pixels (width is ``4 * input_size``).
+        vocab: Vocabulary name (e.g. ``"french"``, ``"english"``) or
+            ``"CUSTOM:<chars>"`` for a custom character set.
+        workers: Number of DataLoader worker processes.
+        amp: Enable PyTorch Automatic Mixed Precision for inference.
+        device: GPU device index; ``None`` selects the default device.
+    """
+
+    val_path: str | Path
+    model_path: str | Path
+    arch: str = "crnn_vgg16_bn"
+    batch_size: int = 64
+    input_size: int = 32
+    vocab: str = "french"
+    workers: int = 4
+    amp: bool = False
+    device: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# Eval result models
+# ---------------------------------------------------------------------------
+
+
+class EvalSlice(BaseModel):
+    """Per-feature slice of evaluation metrics.
+
+    A slice breaks down overall metrics by a binary feature (e.g. italic,
+    drop-cap, bold, header) to surface whether the model performs worse on
+    documents with that feature present.  Downstream consumers (pd-ocr-trainer-
+    spa M12 / M13) can render slices in a comparison table.
+
+    Attributes:
+        feature: Name of the binary feature this slice compares (e.g.
+            ``"italic"``, ``"drop_cap"``).
+        n_pos: Sample count where ``feature`` is present (positive class).
+        n_neg: Sample count where ``feature`` is absent (negative class).
+        n_excluded: Samples excluded from this slice (e.g. missing labels).
+        cer_pos: Character Error Rate on the positive-feature subset.
+        cer_neg: Character Error Rate on the negative-feature subset.
+        wer_pos: Word Error Rate on the positive-feature subset.
+        wer_neg: Word Error Rate on the negative-feature subset.
+        delta_cer: ``cer_pos - cer_neg``; positive means feature hurts CER.
+        low_support: ``True`` when ``n_pos`` is below the support threshold
+            and the delta should be interpreted with caution.
+    """
+
+    feature: str
+    n_pos: int
+    n_neg: int
+    n_excluded: int = 0
+    cer_pos: float | None = None
+    cer_neg: float | None = None
+    wer_pos: float | None = None
+    wer_neg: float | None = None
+    delta_cer: float | None = None
+    low_support: bool = False
+
+
+class RecognitionEvalResult(BaseModel):
+    """Overall + per-slice recognition evaluation results.
+
+    Returned synchronously by ``IEvalRunner.evaluate_recognition``.  Field
+    names and semantics are aligned with the pd-ocr-trainer-spa M7 worker
+    so the adapter mapping is trivial.
+
+    Attributes:
+        cer: Overall Character Error Rate (lower is better).
+        wer: Overall Word Error Rate (lower is better).
+        exact_match_rate: Fraction of samples where the full predicted
+            string exactly matches the ground truth (higher is better).
+        slices: Per-feature breakdown; empty list when no slice features
+            are configured (M7 baseline) -- populated by M12/M13.
+        sample_count: Number of samples evaluated (before exclusions).
+        excluded_count: Samples dropped due to missing / malformed labels.
+        duration_seconds: Wall-clock seconds for the evaluation pass.
+    """
+
+    cer: float
+    wer: float
+    exact_match_rate: float
+    slices: list[EvalSlice] = Field(default_factory=list)
+    sample_count: int
+    excluded_count: int
+    duration_seconds: float
+
+
+class DetectionEvalResult(BaseModel):
+    """Overall + per-slice detection evaluation results.
+
+    Returned synchronously by ``IEvalRunner.evaluate_detection``.
+
+    Attributes:
+        precision: Precision at the IoU-50 threshold.
+        recall: Recall at the IoU-50 threshold.
+        f1: F1 score at the IoU-50 threshold.
+        iou_50: Mean Average Precision at IoU >= 0.50.
+        iou_50_95: Mean Average Precision averaged over IoU 0.50-0.95.
+        slices: Per-feature breakdown; empty list by default.
+        sample_count: Number of images evaluated.
+        excluded_count: Images dropped due to missing / malformed labels.
+        duration_seconds: Wall-clock seconds for the evaluation pass.
+    """
+
+    precision: float
+    recall: float
+    f1: float
+    iou_50: float
+    iou_50_95: float
+    slices: list[EvalSlice] = Field(default_factory=list)
+    sample_count: int
+    excluded_count: int
+    duration_seconds: float
+
+
+# ---------------------------------------------------------------------------
+# IEvalRunner Protocol
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class IEvalRunner(Protocol):
+    """Contract for running DocTR detection and recognition evaluation.
+
+    Unlike ``ITrainingRunner``, eval is a single synchronous forward pass
+    with no epoch loop, so methods return result objects directly rather
+    than yielding event streams.
+
+    Concrete implementations (e.g. ``LocalEvalRunner``) wrap the underlying
+    DocTR eval entry points (``evaluate_detection_from_config`` /
+    ``evaluate_recognition_from_config``).
+
+    Example::
+
+        runner: IEvalRunner = LocalEvalRunner()
+        cfg = RecognitionEvalConfig(
+            val_path="data/val", model_path="checkpoints/best.pt"
+        )
+        result = runner.evaluate_recognition("eval-001", cfg)
+        print(f"CER: {result.cer:.4f}  WER: {result.wer:.4f}")
+    """
+
+    def evaluate_detection(
+        self,
+        profile: str,
+        config: DetectionEvalConfig,
+    ) -> DetectionEvalResult:
+        """Run a detection evaluation pass and return metrics.
+
+        Args:
+            profile: Logical identifier for this evaluation run (used for
+                logging).
+            config: Fully-specified detection evaluation configuration.
+
+        Returns:
+            ``DetectionEvalResult`` with overall precision/recall/F1/IoU
+            metrics and an (initially empty) slices list.
+
+        Raises:
+            Any exception raised by the underlying eval function propagates
+            directly to the caller (no error-event wrapping -- caller decides
+            how to handle).
+        """
+        ...
+
+    def evaluate_recognition(
+        self,
+        profile: str,
+        config: RecognitionEvalConfig,
+    ) -> RecognitionEvalResult:
+        """Run a recognition evaluation pass and return metrics.
+
+        Args:
+            profile: Logical identifier for this evaluation run.
+            config: Fully-specified recognition evaluation configuration.
+
+        Returns:
+            ``RecognitionEvalResult`` with overall CER/WER/exact-match
+            metrics and an (initially empty) slices list.
+
+        Raises:
+            Any exception raised by the underlying eval function propagates
+            directly to the caller.
         """
         ...
