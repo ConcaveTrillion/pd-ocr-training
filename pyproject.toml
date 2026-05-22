@@ -11,7 +11,7 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "pd-book-tools",
+    "pd-book-tools>=0.13.0",
     "pydantic>=2.5",
     "tomli>=2.0",
     "tomli-w>=1.0",
@@ -42,8 +42,13 @@ Source = "https://github.com/ConcaveTrillion/pd-ocr-training"
 [tool.hatch.build.targets.wheel]
 packages = ["pd_ocr_training"]
 
+[[tool.uv.index]]
+name = "pd-index-pip"
+url = "https://concavetrillion.github.io/pd-index-pip/simple/"
+explicit = true
+
 [tool.uv.sources]
-pd-book-tools = { path = "../pd-book-tools", editable = true }
+pd-book-tools = { index = "pd-index-pip" }
 
 [dependency-groups]
 # The dev group installs the `train` extra so the full test suite (which
