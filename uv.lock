@@ -1372,7 +1372,7 @@ wheels = [
 
 [[package]]
 name = "pd-ocr-training"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "pd-book-tools" },

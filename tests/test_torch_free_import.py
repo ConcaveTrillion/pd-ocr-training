@@ -54,7 +54,7 @@ def test_base_import_succeeds_without_torch() -> None:
 
         assert "torch" not in sys.modules, "torch was imported by base package"
         assert "doctr" not in sys.modules, "doctr was imported by base package"
-        assert pd_ocr_training.__version__ == "0.1.0"
+        assert pd_ocr_training.__version__ == "0.2.1"
         print("OK")
         """
     )

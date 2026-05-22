@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from pd_ocr_training.local import LocalTrainingRunner
     from pd_ocr_training.local_eval import LocalEvalRunner
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 __all__ = [
     "DetectionConfig",
     "DetectionEvalConfig",
