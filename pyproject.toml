@@ -201,16 +201,11 @@ exclude = [
 # Catches unannotated functions, inferred-Any propagation, untyped decorators,
 # and missing return types that "standard" mode skips.
 typeCheckingMode = "recommended"
-# NOTE: failOnWarnings explicitly set to false — "recommended" mode bakes in
-# failOnWarnings=true as a mode default, which makes pre-commit exit 1 whenever
-# any warning exists (even with --level error). The workspace canonical pattern
-# defers failOnWarnings until stub coverage for optional GPU deps (torch /
-# DocTR / torchvision) matures. Without this explicit override the commented-out
-# line below has no effect — the mode default takes precedence.
-failOnWarnings = false
-# Future: set to true once torch/DocTR/torchvision stubs cover the warnings in
-# _eval_backend.py / local.py / local_eval.py (reportAny, reportExplicitAny,
-# reportPrivateImportUsage, reportMissingTypeStubs).
+# failOnWarnings = true — workspace-canonical strict mode.
+# Existing warnings from untyped torch/DocTR/torchvision APIs are grandfathered
+# via .basedpyright/baseline.json (generated with --writebaseline). New code
+# that introduces warnings beyond the baseline will fail CI, gating warning debt.
+failOnWarnings = true
 
 # Import cycles are structural and resolved via TYPE_CHECKING guards.
 # Actual import order issues surface as runtime ImportErrors.
