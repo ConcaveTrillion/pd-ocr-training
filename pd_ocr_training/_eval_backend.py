@@ -47,7 +47,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pd_ocr_training.protocols import (
     DetectionEvalResult,
@@ -433,7 +433,9 @@ def evaluate_recognition_impl(
     ground_truths: list[str] = raw["ground_truths"]
     # crop_ids are threaded through by _run_recognition_inference for glyph
     # slicing (#8).  They are parallel to predictions / ground_truths.
-    _crop_ids: list[str] = raw.get("crop_ids", [])
+    # cast() narrows the Any from dict[str, Any] subscription so basedpyright
+    # does not emit reportAny on the right-hand side.
+    _crop_ids: list[str] = cast("list[str]", raw.get("crop_ids", []))
     return RecognitionEvalResult(
         cer=_cer(predictions, ground_truths),
         wer=_wer(predictions, ground_truths),
