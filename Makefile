@@ -12,11 +12,28 @@ $(_goals):
 
 else
 
-.PHONY: setup lint lint-check format typecheck test ci build clean pre-commit-check
+# ---------------------------------------------------------------------------
+# Peer-repo discovery for dev-local target
+# ---------------------------------------------------------------------------
+PEER_BOOK_TOOLS_PATH := ../pd-book-tools
+PEER_BOOK_TOOLS := $(realpath $(PEER_BOOK_TOOLS_PATH))
+
+define _require_peer_book_tools
+	@if [ -z "$(PEER_BOOK_TOOLS)" ]; then \
+		echo ""; \
+		echo "❌  Cannot find pd-book-tools at $(PEER_BOOK_TOOLS_PATH)"; \
+		echo "    Clone it first:  git clone https://github.com/ConcaveTrillion/pd-book-tools.git ../pd-book-tools"; \
+		echo ""; \
+		exit 1; \
+	fi
+endef
+
+.PHONY: setup lint lint-check format typecheck test ci build clean pre-commit-check dev-local
 
 setup: ## Install dependencies (idempotent)
 	uv sync --group dev
-	@[ -f .git/hooks/pre-commit ] || uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+	@HOOKS_PATH="$$(git config core.hooksPath 2>/dev/null || echo '.git/hooks')"; \
+	  [ -f "$$HOOKS_PATH/pre-commit" ] || uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
 
 lint: ## Run linting (auto-fix)
 	uv run ruff check --select I --fix
@@ -47,6 +64,15 @@ ci: ## Run complete CI pipeline (setup, pre-commit, lint-check, typecheck, test)
 
 build: ## Build the project
 	uv build
+
+dev-local: ## [local-dev] Install pd-book-tools from ../pd-book-tools as editable in the venv
+	$(call _require_peer_book_tools)
+	@echo "Installing pd-book-tools editable from $(PEER_BOOK_TOOLS)..."
+	UV_LINK_MODE=copy uv pip install -e "$(PEER_BOOK_TOOLS)"
+	UV_LINK_MODE=copy uv pip install -e . --no-deps
+	UV_LINK_MODE=copy uv pip install --group dev
+	@touch .venv/.pd-dev-local
+	@echo "Local editable pd-book-tools is active in the venv."
 
 clean: ## Clean cache and temporary files
 	rm -rf dist .venv .pytest_cache .ruff_cache .ci-ai.log htmlcov

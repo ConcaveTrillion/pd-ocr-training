@@ -1341,7 +1341,8 @@ wheels = [
 
 [[package]]
 name = "pd-book-tools"
-source = { editable = "../pd-book-tools" }
+version = "0.13.0"
+source = { registry = "https://concavetrillion.github.io/pd-index-pip/simple/" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "ipython" },
@@ -1364,43 +1365,9 @@ dependencies = [
     { name = "torchvision" },
     { name = "transformers" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "cupy-cuda12x", marker = "extra == 'gpu'", specifier = ">=13.4.1" },
-    { name = "huggingface-hub", specifier = ">=0.23" },
-    { name = "ipython", specifier = ">=8.34" },
-    { name = "ipywidgets", specifier = ">=8.1" },
-    { name = "matplotlib", specifier = ">=3.10.1" },
-    { name = "numpy", specifier = ">=2.2,<3" },
-    { name = "opencv-contrib-python", specifier = ">=4.12.0.88" },
-    { name = "opencv-cuda", marker = "extra == 'gpu'", specifier = ">=0.0.2" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pillow", specifier = ">=10.0" },
-    { name = "pillow-avif-plugin", specifier = ">=1.4" },
-    { name = "pillow-heif", specifier = ">=0.18" },
-    { name = "pydantic", specifier = ">=2.0" },
-    { name = "pytesseract", specifier = ">=0.3.13,<0.4.0" },
-    { name = "python-doctr", git = "https://github.com/mindee/doctr.git" },
-    { name = "regex", specifier = ">=2024.11.6,<2025.0.0" },
-    { name = "shapely", specifier = ">=2.0" },
-    { name = "thefuzz", specifier = ">=0.22.1,<0.23.0" },
-    { name = "torch", specifier = ">=2.6" },
-    { name = "torchaudio", specifier = ">=2.7.0" },
-    { name = "torchvision", specifier = ">=0.22.0" },
-    { name = "transformers", specifier = ">=4.45" },
-]
-provides-extras = ["gpu"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "basedpyright", specifier = ">=1.39.4" },
-    { name = "gitlint", specifier = ">=0.19.1" },
-    { name = "pre-commit", specifier = ">=4.2.0,<5.0.0" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "pytest-cov", specifier = ">=6.2.1" },
-    { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.15.13" },
+sdist = { url = "https://github.com/ConcaveTrillion/pd-book-tools/releases/download/v0.13.0/pd_book_tools-0.13.0.tar.gz" }
+wheels = [
+    { url = "https://github.com/ConcaveTrillion/pd-book-tools/releases/download/v0.13.0/pd_book_tools-0.13.0-py3-none-any.whl" },
 ]
 
 [[package]]
@@ -1440,7 +1407,7 @@ dev = [
 requires-dist = [
     { name = "matplotlib", marker = "extra == 'train'" },
     { name = "numpy", marker = "extra == 'train'" },
-    { name = "pd-book-tools", editable = "../pd-book-tools" },
+    { name = "pd-book-tools", specifier = ">=0.13.0", index = "https://concavetrillion.github.io/pd-index-pip/simple/" },
     { name = "pydantic", specifier = ">=2.5" },
     { name = "python-doctr", marker = "extra == 'train'" },
     { name = "tomli", specifier = ">=2.0" },
@@ -1976,8 +1943,8 @@ wheels = [
 
 [[package]]
 name = "python-doctr"
-version = "1.0.2a0"
-source = { git = "https://github.com/mindee/doctr.git#bc0db21e030926b4b7641fe71f7b8367e3ab042a" }
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyascii" },
     { name = "defusedxml" },
@@ -1997,6 +1964,10 @@ dependencies = [
     { name = "torchvision" },
     { name = "tqdm" },
     { name = "validators" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/aa/35afe5b4f2e601557f9a617411896df0a5e092caac44a7ab78caec1e7fcd/python_doctr-1.0.1.tar.gz", hash = "sha256:6fc54316ea7915e1fa96bf58e9434b16e1511c3c61dff16d0802f18c71a5d9c6", size = 223224, upload-time = "2026-02-04T15:05:51.862Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/1d/83cfd3f35e6f83553b3effc951a45813a794da2f6ffc5c0e8f3557f4cead/python_doctr-1.0.1-py3-none-any.whl", hash = "sha256:a54028bc59df98816059fb038265c787ca971098ee78a2af2514267e6c71ce7e", size = 288861, upload-time = "2026-02-04T15:05:48.783Z" },
 ]
 
 [[package]]
