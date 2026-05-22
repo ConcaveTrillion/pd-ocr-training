@@ -3,13 +3,17 @@
 Covers:
 - Eval config models (DetectionEvalConfig, RecognitionEvalConfig)
 - Eval result models (EvalSlice, DetectionEvalResult, RecognitionEvalResult)
+- GlyphFeatureSet model and RecognitionEvalConfig glyph-slicing fields (#7)
 - IEvalRunner Protocol runtime_checkable behaviour
 """
+
+import pytest
 
 from pd_ocr_training.protocols import (
     DetectionEvalConfig,
     DetectionEvalResult,
     EvalSlice,
+    GlyphFeatureSet,
     IEvalRunner,
     RecognitionEvalConfig,
     RecognitionEvalResult,
@@ -221,3 +225,139 @@ def test_eval_protocol_empty_class_not_instance() -> None:
         pass
 
     assert not isinstance(EmptyStub(), IEvalRunner)
+
+
+# ---------------------------------------------------------------------------
+# GlyphFeatureSet model (#7)
+# ---------------------------------------------------------------------------
+
+
+def test_glyph_feature_set_defaults() -> None:
+    """GlyphFeatureSet has all-absent defaults."""
+    g = GlyphFeatureSet()
+    assert g.ligatures == []
+    assert g.long_s is False
+    assert g.swash is False
+
+
+def test_glyph_feature_set_round_trip() -> None:
+    """GlyphFeatureSet round-trips via model_validate / model_dump."""
+    data = {"ligatures": ["fi", "fl"], "long_s": True, "swash": False}
+    g = GlyphFeatureSet.model_validate(data)
+    assert g.ligatures == ["fi", "fl"]
+    assert g.long_s is True
+    assert g.swash is False
+    dumped = g.model_dump()
+    assert dumped == data
+
+
+def test_glyph_feature_set_empty_ligatures() -> None:
+    """GlyphFeatureSet accepts empty ligatures list."""
+    g = GlyphFeatureSet(ligatures=[], long_s=False, swash=True)
+    assert g.ligatures == []
+    assert g.swash is True
+
+
+def test_glyph_feature_set_multiple_ligature_kinds() -> None:
+    """GlyphFeatureSet stores multiple distinct ligature kind strings."""
+    g = GlyphFeatureSet(ligatures=["fi", "fl", "long_st", "ct"])
+    assert set(g.ligatures) == {"fi", "fl", "long_st", "ct"}
+
+
+# ---------------------------------------------------------------------------
+# RecognitionEvalConfig glyph-slicing fields (#7)
+# ---------------------------------------------------------------------------
+
+
+def test_recognition_eval_config_glyph_fields_default() -> None:
+    """RecognitionEvalConfig glyph fields default to no-slicing behavior."""
+    cfg = RecognitionEvalConfig(val_path="/tmp/val", model_path="/tmp/model.pt")
+    assert cfg.glyph_annotations_path is None
+    assert cfg.slice_glyph_features is False
+
+
+def test_recognition_eval_config_glyph_path_set() -> None:
+    """RecognitionEvalConfig accepts a glyph_annotations_path alongside the flag."""
+    cfg = RecognitionEvalConfig(
+        val_path="/tmp/val",
+        model_path="/tmp/model.pt",
+        glyph_annotations_path="/tmp/glyphs.json",
+        slice_glyph_features=True,
+    )
+    assert cfg.glyph_annotations_path is not None
+    assert cfg.slice_glyph_features is True
+
+
+def test_recognition_eval_config_flag_without_path_raises() -> None:
+    """RecognitionEvalConfig raises ValueError when slice_glyph_features=True and path is None."""
+    with pytest.raises(ValueError, match="glyph_annotations_path"):
+        RecognitionEvalConfig(
+            val_path="/tmp/val",
+            model_path="/tmp/model.pt",
+            slice_glyph_features=True,
+            glyph_annotations_path=None,
+        )
+
+
+def test_recognition_eval_config_flag_false_path_none_ok() -> None:
+    """slice_glyph_features=False with no path is valid (default no-op)."""
+    cfg = RecognitionEvalConfig(
+        val_path="/tmp/val",
+        model_path="/tmp/model.pt",
+        slice_glyph_features=False,
+        glyph_annotations_path=None,
+    )
+    assert cfg.slice_glyph_features is False
+
+
+def test_recognition_eval_config_flag_false_path_set_ok() -> None:
+    """slice_glyph_features=False with a path set is valid (slicing just won't run)."""
+    cfg = RecognitionEvalConfig(
+        val_path="/tmp/val",
+        model_path="/tmp/model.pt",
+        slice_glyph_features=False,
+        glyph_annotations_path="/tmp/glyphs.json",
+    )
+    assert cfg.glyph_annotations_path is not None
+    assert cfg.slice_glyph_features is False
+
+
+# ---------------------------------------------------------------------------
+# EvalSlice delta_wer field (#7)
+# ---------------------------------------------------------------------------
+
+
+def test_eval_slice_delta_wer_default_none() -> None:
+    """EvalSlice.delta_wer defaults to None."""
+    s = EvalSlice(feature="long_s", n_pos=50, n_neg=950)
+    assert s.delta_wer is None
+
+
+def test_eval_slice_delta_wer_set() -> None:
+    """EvalSlice.delta_wer can be set to a float."""
+    s = EvalSlice(
+        feature="ligature:fi",
+        n_pos=40,
+        n_neg=960,
+        delta_wer=0.12,
+    )
+    assert s.delta_wer == pytest.approx(0.12)
+
+
+def test_eval_slice_full_with_delta_wer() -> None:
+    """EvalSlice accepts all metric fields including delta_wer."""
+    s = EvalSlice(
+        feature="swash",
+        n_pos=30,
+        n_neg=70,
+        n_excluded=5,
+        cer_pos=0.10,
+        cer_neg=0.04,
+        wer_pos=0.15,
+        wer_neg=0.05,
+        delta_cer=0.06,
+        delta_wer=0.10,
+        low_support=False,
+    )
+    assert s.delta_cer == pytest.approx(0.06)
+    assert s.delta_wer == pytest.approx(0.10)

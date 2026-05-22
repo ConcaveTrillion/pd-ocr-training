@@ -57,7 +57,7 @@ from pathlib import (
 )
 from typing import TYPE_CHECKING, Literal, runtime_checkable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Protocol
 
 if TYPE_CHECKING:
@@ -261,6 +261,36 @@ class ITrainingRunner(Protocol):
 
 
 # ---------------------------------------------------------------------------
+# Glyph feature presence model
+# ---------------------------------------------------------------------------
+
+
+class GlyphFeatureSet(BaseModel):
+    """Per-word glyph feature presence, decoupled from pd-book-tools.
+
+    Carries only the three feature-presence facts that recognition eval needs.
+    The caller (``pd-ocr-trainer-spa``) derives this from ``pd-book-tools``
+    ``GlyphAnnotations``; ``pd-ocr-training`` never imports ``GlyphAnnotations``
+    itself — that would add a heavy foundation-lib dependency edge.
+
+    A JSON sidecar passed to :class:`RecognitionEvalConfig` is a single
+    ``dict[str, GlyphFeatureSet]`` keyed by recognition crop id (the DocTR
+    recognition val-set label key).
+
+    Attributes:
+        ligatures: Ligature kind strings present in this word, e.g.
+            ``["fi", "long_st"]``.  Per-kind slicing is done on these values;
+            they are never lumped into a single ``"ligatures-present"`` bucket.
+        long_s: ``True`` when the word contains one or more long-s glyphs.
+        swash: ``True`` when the word contains one or more swash glyphs.
+    """
+
+    ligatures: list[str] = []
+    long_s: bool = False
+    swash: bool = False
+
+
+# ---------------------------------------------------------------------------
 # Eval config models
 # ---------------------------------------------------------------------------
 
@@ -307,6 +337,14 @@ class RecognitionEvalConfig(BaseModel):
         workers: Number of DataLoader worker processes.
         amp: Enable PyTorch Automatic Mixed Precision for inference.
         device: GPU device index; ``None`` selects the default device.
+        glyph_annotations_path: Optional path to a JSON sidecar file mapping
+            recognition crop ids to :class:`GlyphFeatureSet` objects.  Required
+            when ``slice_glyph_features`` is ``True``; ignored otherwise.
+        slice_glyph_features: When ``True``, recognition eval emits per-feature
+            :class:`EvalSlice` entries (``ligature:<kind>``, ``long_s``,
+            ``swash``) in :attr:`RecognitionEvalResult.slices`.  Requires
+            ``glyph_annotations_path`` to be set — a ``ValueError`` is raised at
+            validation time when the flag is ``True`` but the path is ``None``.
     """
 
     val_path: str | Path
@@ -318,6 +356,14 @@ class RecognitionEvalConfig(BaseModel):
     workers: int = 4
     amp: bool = False
     device: int | None = None
+    glyph_annotations_path: Path | None = None
+    slice_glyph_features: bool = False
+
+    @model_validator(mode="after")
+    def _require_path_when_slicing(self) -> RecognitionEvalConfig:
+        if self.slice_glyph_features and self.glyph_annotations_path is None:
+            raise ValueError("glyph_annotations_path must be set when slice_glyph_features is True")
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -344,6 +390,8 @@ class EvalSlice(BaseModel):
         wer_pos: Word Error Rate on the positive-feature subset.
         wer_neg: Word Error Rate on the negative-feature subset.
         delta_cer: ``cer_pos - cer_neg``; positive means feature hurts CER.
+        delta_wer: ``wer_pos - wer_neg``; positive means feature hurts WER.
+            ``None`` when either side is empty.  Mirrors ``delta_cer``.
         low_support: ``True`` when ``n_pos`` is below the support threshold
             and the delta should be interpreted with caution.
     """
@@ -357,6 +405,7 @@ class EvalSlice(BaseModel):
     wer_pos: float | None = None
     wer_neg: float | None = None
     delta_cer: float | None = None
+    delta_wer: float | None = None
     low_support: bool = False
 
 

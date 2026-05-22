@@ -71,6 +71,7 @@ def test_torch_free_public_names_importable() -> None:
             DetectionEvalConfig,
             DetectionEvalResult,
             EvalSlice,
+            GlyphFeatureSet,
             IEvalRunner,
             ITrainingRunner,
             RecognitionConfig,
@@ -92,6 +93,12 @@ def test_torch_free_public_names_importable() -> None:
         assert EvalSlice is not None
         assert DetectionEvalResult is not None
         assert RecognitionEvalResult is not None
+        # GlyphFeatureSet is torch-free (#7)
+        g = GlyphFeatureSet()
+        assert g.ligatures == []
+        assert g.long_s is False
+        assert g.swash is False
+        assert "torch" not in sys.modules, "GlyphFeatureSet pulled in torch"
         print("OK")
         """
     )
