@@ -333,3 +333,24 @@ tracked for cleanup.
 **Justification.** Both `progresses[i]` and `progresses[i - 1]` are
 guarded non-None before the comparison. The suppression silences a
 false-positive narrowing gap.
+
+---
+
+## Python — basedpyright (source: DocTR stub gaps)
+
+### 27. `reportArgumentType` — `pd_ocr_training/_eval_backend.py`
+
+**Suppression:** `# pyright: ignore[reportArgumentType]` on the `val_set`
+argument to `DataLoader(...)` and on the `SequentialSampler(val_set)` argument,
+in both `_run_recognition_inference` and `_run_detection_inference` (4 sites).
+
+**Justification.** DocTR's `RecognitionDataset` / `DetectionDataset` are
+torch-compatible map-style datasets at runtime (they implement `__len__` /
+`__getitem__` and a `collate_fn`), but DocTR's bundled type stubs derive them
+from an internal `AbstractDataset` that does not declare the
+`torch.utils.data.Dataset` base class. basedpyright therefore cannot prove the
+assignment to `DataLoader`'s `dataset` parameter. This is a third-party stub
+gap, not a real type error — the legacy verbatim-moved `detect.py` / `recog.py`
+use the identical pattern but are excluded from basedpyright entirely. The
+tool-native `# pyright: ignore[reportArgumentType]` form is used (not a
+mypy-style `# type: ignore`). Remove if DocTR ships corrected stubs.

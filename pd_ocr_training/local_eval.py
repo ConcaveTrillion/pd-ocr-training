@@ -16,20 +16,21 @@ caller unchanged.  It is the caller's responsibility to handle errors (e.g.
 a ``RuntimeError`` when the checkpoint file is missing); the runner does not
 wrap them in result objects.
 
-Stub functions
---------------
-The production eval entry points (``evaluate_detection_from_config`` /
-``evaluate_recognition_from_config``) call into DocTR / torch, which are
-optional heavy deps.  The stub implementations provided in this module raise
-``NotImplementedError`` so that:
+Eval entry points
+-----------------
+The module-level eval entry points (``evaluate_detection_from_config`` /
+``evaluate_recognition_from_config``) delegate to the real DocTR backend in
+``pd_ocr_training._eval_backend``.  That backend module is imported *lazily*
+inside each function -- never at module scope -- so that:
 
 1. The package can be imported and the Protocol contract validated in a
-   torch-free environment.
-2. Tests can monkeypatch the stubs rather than importing the real torch stack.
+   torch-free environment (importing ``local_eval`` pulls in no torch/DocTR).
+2. Tests can monkeypatch these module-level names, or the
+   ``_eval_backend.evaluate_*_impl`` functions, rather than importing the real
+   torch stack.
 
-When the ``[train]`` extra is installed the stubs should be replaced with
-real DocTR eval wrappers; that migration is deferred to the follow-up
-eval-implementation task.
+Running an actual eval requires the ``[train]`` extra (torch + DocTR); calling
+either function without it raises ``ImportError`` from the lazy import.
 """
 
 from __future__ import annotations
@@ -46,48 +47,60 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Stub eval entry points (replaceable via monkeypatch in tests)
+# Eval entry points -- delegate to the lazily-imported DocTR backend
 # ---------------------------------------------------------------------------
 
 
 def evaluate_detection_from_config(**kwargs: Any) -> DetectionEvalResult:
-    """Stub detection eval entry point.
+    """Run a detection evaluation pass via the real DocTR backend.
 
-    This stub exists so ``LocalEvalRunner`` can be imported and tested in a
-    torch-free environment.  Replace this function (via monkeypatch or direct
-    assignment) with a real DocTR detection eval wrapper once the eval
-    implementation is available.
+    Reconstructs a :class:`DetectionEvalConfig` from the flattened kwargs and
+    delegates to :func:`pd_ocr_training._eval_backend.evaluate_detection_impl`.
+    The ``_eval_backend`` module is imported lazily so importing ``local_eval``
+    stays torch-free.
 
     Args:
-        **kwargs: Detection eval kwargs forwarded from ``LocalEvalRunner``.
+        **kwargs: Detection eval kwargs forwarded from ``LocalEvalRunner`` --
+            the ``DetectionEvalConfig`` fields plus a ``profile`` key.
+
+    Returns:
+        A populated ``DetectionEvalResult``.
 
     Raises:
-        NotImplementedError: Always -- this is a stub.
+        ImportError: When the ``[train]`` extra (torch / DocTR) is not installed.
     """
-    raise NotImplementedError(
-        "evaluate_detection_from_config is not yet implemented. "
-        "Install the [train] extra and provide a real DocTR eval wrapper."
-    )
+    from pd_ocr_training import _eval_backend
+    from pd_ocr_training.protocols import DetectionEvalConfig
+
+    profile = kwargs.pop("profile", "eval")
+    config = DetectionEvalConfig.model_validate(kwargs)
+    return _eval_backend.evaluate_detection_impl(profile, config)
 
 
 def evaluate_recognition_from_config(**kwargs: Any) -> RecognitionEvalResult:
-    """Stub recognition eval entry point.
+    """Run a recognition evaluation pass via the real DocTR backend.
 
-    This stub exists so ``LocalEvalRunner`` can be imported and tested in a
-    torch-free environment.  Replace this function (via monkeypatch or direct
-    assignment) with a real DocTR recognition eval wrapper once the eval
-    implementation is available.
+    Reconstructs a :class:`RecognitionEvalConfig` from the flattened kwargs and
+    delegates to :func:`pd_ocr_training._eval_backend.evaluate_recognition_impl`.
+    The ``_eval_backend`` module is imported lazily so importing ``local_eval``
+    stays torch-free.
 
     Args:
-        **kwargs: Recognition eval kwargs forwarded from ``LocalEvalRunner``.
+        **kwargs: Recognition eval kwargs forwarded from ``LocalEvalRunner`` --
+            the ``RecognitionEvalConfig`` fields plus a ``profile`` key.
+
+    Returns:
+        A populated ``RecognitionEvalResult``.
 
     Raises:
-        NotImplementedError: Always -- this is a stub.
+        ImportError: When the ``[train]`` extra (torch / DocTR) is not installed.
     """
-    raise NotImplementedError(
-        "evaluate_recognition_from_config is not yet implemented. "
-        "Install the [train] extra and provide a real DocTR eval wrapper."
-    )
+    from pd_ocr_training import _eval_backend
+    from pd_ocr_training.protocols import RecognitionEvalConfig
+
+    profile = kwargs.pop("profile", "eval")
+    config = RecognitionEvalConfig.model_validate(kwargs)
+    return _eval_backend.evaluate_recognition_impl(profile, config)
 
 
 # ---------------------------------------------------------------------------
