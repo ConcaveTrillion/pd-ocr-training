@@ -30,7 +30,7 @@ def test_training_event_with_progress() -> None:
 
 def test_training_event_data_round_trips() -> None:
     """TrainingEvent.data round-trips a plain dict payload."""
-    payload = {"loss": 0.42, "lr": 0.001}
+    payload: dict[str, object] = {"loss": 0.42, "lr": 0.001}
     event = TrainingEvent(kind="metric", message="metrics", data=payload)
     assert event.data == payload
 
