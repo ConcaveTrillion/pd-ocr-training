@@ -442,17 +442,17 @@ def test_detection_events_arrive_in_order_under_concurrency(
     assert collected[-1].kind == "done"
 
     # Events must arrive in epoch order.
-    epoch_nums = [int(e.data["epoch"]) for e in epoch_events if e.data is not None]  # type: ignore[index]
+    epoch_nums = [int(str(e.data["epoch"])) for e in epoch_events if e.data is not None]
     assert epoch_nums == [1, 2, 3], f"unexpected epoch order: {epoch_nums}"
 
     # Progress values must be strictly increasing.
     progresses = [e.progress for e in epoch_events]
     for i in range(1, len(progresses)):
-        assert progresses[i] is not None
-        assert progresses[i - 1] is not None
-        assert progresses[i] > progresses[i - 1], (
-            f"progress not increasing at index {i}: {progresses}"
-        )  # type: ignore[operator]
+        prev = progresses[i - 1]
+        curr = progresses[i]
+        assert curr is not None
+        assert prev is not None
+        assert curr > prev, f"progress not increasing at index {i}: {progresses}"
 
 
 # ---------------------------------------------------------------------------
