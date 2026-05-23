@@ -147,4 +147,69 @@ this is how it gets justified.
 - A long-standing suppression whose stated rationale no longer holds after a
   refactor — CT decides whether to drop the suppression.
 
+## Rule: basedpyright — fix the warning, don't suppress it
+
+**The rule.** The workspace runs basedpyright with `failOnWarnings = true`
+in every repo. Zero warnings tolerated on `main`. When basedpyright flags a
+warning, prefer a real fix — explicit type annotation, narrowing, `cast`
+where genuinely needed — over a `# pyright: ignore[...]`. Only suppress
+when the underlying gap is upstream (genuinely-untyped third-party library,
+soft-optional dep not in the lockfile) AND no `py.typed` wheel exists. In
+that case, follow "Document every lint-rule suppression" above.
+
+**Why.** Three concrete patterns recur and each is fixable, not
+ignorable:
+
+1. `reportMissingTypeStubs` on a `pd_*` sibling import — pd-book-tools
+   v0.14.0+ and pd-ocr-ops v0.2.0+ ship `py.typed`. Bump the wheel pin in
+   `pyproject.toml` instead of adding an ignore. Note: `py.typed` only
+   guarantees a top-level marker; attribute-level typing may still surface
+   as `Any` in some access patterns (especially `getattr()` chains —
+   `getattr()` always returns `Any` regardless of upstream typing).
+   Prefer direct attribute access (`obj.attr`) over `getattr(obj, "attr")`.
+2. `reportAny` on a value pulled from a `dict[str, Any]` or an untyped
+   third-party return — narrow with an explicit `cast(T, …)` or annotate
+   the unpacking target. Don't suppress.
+3. `reportUnnecessaryCast` — a redundant `cast(T, x)` or `T(x)` where `x`
+   is already `T`. Delete the cast; don't ignore the warning.
+
+When a suppression *is* warranted, the placement matters: basedpyright
+attributes a diagnostic to a specific line. For a multi-line
+`from foo import (\n    bar,\n)` the diagnostic attaches to the
+`from foo import (` line, not the symbol line. A `# pyright: ignore` on
+the wrong line yields two warnings — the original (still unsuppressed)
+plus `reportUnnecessaryTypeIgnoreComment` on the misplaced ignore. Run
+`uv run basedpyright <pkg>` and read the column-prefixed output to find
+the line basedpyright reports.
+
+**Common high-confidence violations** (bot auto-fix candidates)
+
+- `# pyright: ignore[reportMissingTypeStubs]` on a `pd_book_tools` or
+  `pd_ocr_ops` import — the wheel ships `py.typed`; bump the pin and
+  delete the ignore.
+- `cast(X, y)` or `X(y)` (e.g. `str(y)`) immediately followed by code that
+  treats `y` as already type `X` because the source is annotated `X` —
+  redundant; remove.
+- `# pyright: ignore[<rule>]` on a line basedpyright doesn't attribute
+  the diagnostic to (verify with `uv run basedpyright` column output).
+- Adding `--level error` or any other CI flag to suppress warnings
+  globally — `failOnWarnings = true` is the workspace standard; fix the
+  warning at the source.
+- `getattr(obj, "attr")` where `obj` is annotated as a typed class with
+  attribute `attr` — direct attribute access type-checks; `getattr()`
+  drops the type to `Any`.
+
+**Common judgment-call violations** (bot flags, CT decides)
+
+- A `cast(T, x)` where `x` is `Any` from an untyped third-party return —
+  acceptable, but consider whether a shipped stubs package would be
+  better long-term.
+- A `# pyright: ignore[reportMissingImports]` on a genuinely-optional
+  dep (e.g. cupy, torch under CPU-only CI) — acceptable when the import
+  is also try/except-guarded; bot flags so CT can confirm the dep really
+  is optional.
+- A `# pyright: ignore[reportAny]` on a FastAPI `Depends(...)` default —
+  acceptable; the framework's `Depends()` return type is intentionally
+  `Any` so handlers can declare their own signatures.
+
 <!-- workspace-conventions:end -->
