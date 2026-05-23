@@ -1341,7 +1341,7 @@ wheels = [
 
 [[package]]
 name = "pd-book-tools"
-version = "0.13.0"
+version = "0.14.1"
 source = { registry = "https://concavetrillion.github.io/pd-index-pip/simple/" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -1365,9 +1365,9 @@ dependencies = [
     { name = "torchvision" },
     { name = "transformers" },
 ]
-sdist = { url = "https://github.com/ConcaveTrillion/pd-book-tools/releases/download/v0.13.0/pd_book_tools-0.13.0.tar.gz" }
+sdist = { url = "https://github.com/ConcaveTrillion/pd-book-tools/releases/download/v0.14.1/pd_book_tools-0.14.1.tar.gz" }
 wheels = [
-    { url = "https://github.com/ConcaveTrillion/pd-book-tools/releases/download/v0.13.0/pd_book_tools-0.13.0-py3-none-any.whl" },
+    { url = "https://github.com/ConcaveTrillion/pd-book-tools/releases/download/v0.14.1/pd_book_tools-0.14.1-py3-none-any.whl" },
 ]
 
 [[package]]
@@ -1407,7 +1407,7 @@ dev = [
 requires-dist = [
     { name = "matplotlib", marker = "extra == 'train'" },
     { name = "numpy", marker = "extra == 'train'" },
-    { name = "pd-book-tools", specifier = ">=0.13.0", index = "https://concavetrillion.github.io/pd-index-pip/simple/" },
+    { name = "pd-book-tools", specifier = ">=0.14.1", index = "https://concavetrillion.github.io/pd-index-pip/simple/" },
     { name = "pydantic", specifier = ">=2.5" },
     { name = "python-doctr", marker = "extra == 'train'" },
     { name = "tomli", specifier = ">=2.0" },
