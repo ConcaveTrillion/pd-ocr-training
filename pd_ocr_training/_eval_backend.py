@@ -556,7 +556,11 @@ def evaluate_recognition_impl(
     # Glyph slice emission (#9): load sidecar and emit per-feature EvalSlices.
     slices: list[EvalSlice] = []
     if config.slice_glyph_features and config.glyph_annotations_path is not None:
-        sidecar_raw: dict[str, Any] = json.loads(config.glyph_annotations_path.read_text())
+        # json.loads returns Any; cast to the expected mapping shape before
+        # iterating so basedpyright does not emit reportAny / reportExplicitAny.
+        sidecar_raw = cast(
+            "dict[str, object]", json.loads(config.glyph_annotations_path.read_text())
+        )
         sidecar: dict[str, GlyphFeatureSet] = {
             k: GlyphFeatureSet.model_validate(v) for k, v in sidecar_raw.items()
         }
