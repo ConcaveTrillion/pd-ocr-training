@@ -36,21 +36,36 @@ glyph-feature sidecar loaded by ``evaluate_recognition_impl`` when
 ``config.slice_glyph_features`` is ``True``. Keying by crop id (not by
 iteration index) is robust to any filtering or reordering of the val set.
 
-Per-feature glyph slicing (issue #9, blocked by #7+#8)
--------------------------------------------------------
-Slice emission is deferred — ``slices`` stays ``[]`` for now. Issue #9 will
-wire the sidecar load + per-feature bucketing into ``evaluate_recognition_impl``
-once #7 and #8 are merged.
+Per-feature glyph slicing (issue #9)
+-------------------------------------
+When ``config.slice_glyph_features`` is ``True`` and
+``config.glyph_annotations_path`` is set, ``evaluate_recognition_impl`` loads
+the JSON sidecar into a ``dict[str, GlyphFeatureSet]`` and emits one
+:class:`EvalSlice` per feature into ``RecognitionEvalResult.slices``.
+
+Feature universe: ``{"long_s", "swash"}`` plus one ``"ligature:<kind>"`` entry
+for every distinct ligature kind appearing in the sidecar.  Each feature's
+positive / negative / excluded sets are built per the spec (§4):
+
+- **positive** — crop id present in sidecar **and** feature is present.
+- **negative** — crop id present in sidecar **and** feature is absent.
+- **excluded** — crop id absent from sidecar.
+
+``delta_cer = cer_pos - cer_neg``, ``delta_wer = wer_pos - wer_neg`` — both
+``None`` when either side is empty.  ``low_support = (n_pos < 30)``.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from typing import TYPE_CHECKING, Any, cast
 
 from pd_ocr_training.protocols import (
     DetectionEvalResult,
+    EvalSlice,
+    GlyphFeatureSet,
     RecognitionEvalResult,
 )
 
@@ -406,6 +421,107 @@ def _run_detection_inference(
 
 
 # ---------------------------------------------------------------------------
+# Per-feature glyph slice emission (issue #9)
+# ---------------------------------------------------------------------------
+
+_LOW_SUPPORT_THRESHOLD = 30
+
+
+def _emit_glyph_slices(
+    predictions: list[str],
+    ground_truths: list[str],
+    crop_ids: list[str],
+    sidecar: dict[str, GlyphFeatureSet],
+) -> list[EvalSlice]:
+    """Build per-feature EvalSlice entries from glyph-feature sidecar data.
+
+    Feature universe: ``{"long_s", "swash"}`` plus one ``"ligature:<kind>"``
+    entry for every distinct ligature kind seen across all sidecar entries.
+    ``long_s`` and ``swash`` are always emitted; ligature kinds are only emitted
+    when at least one sidecar entry has that kind.
+
+    Args:
+        predictions: Predicted strings, parallel to ``crop_ids``.
+        ground_truths: Ground-truth strings, parallel to ``crop_ids``.
+        crop_ids: Recognition crop ids (val-set label keys), parallel to
+            ``predictions`` and ``ground_truths``.
+        sidecar: Parsed glyph-feature JSON — maps crop id →
+            :class:`GlyphFeatureSet`.
+
+    Returns:
+        List of :class:`EvalSlice` — one per feature in the universe.
+    """
+    # Build the feature universe: fixed features + per-kind ligature features.
+    ligature_kinds: set[str] = set()
+    for feat in sidecar.values():
+        ligature_kinds.update(feat.ligatures)
+    features: list[str] = ["long_s", "swash", *sorted(f"ligature:{k}" for k in ligature_kinds)]
+
+    # Build per-sample buckets: pos_idx / neg_idx / excl_idx for each feature.
+    # A sample is "excluded" from ALL features when its crop id is absent from
+    # the sidecar.
+    slices: list[EvalSlice] = []
+    for feature in features:
+        pos_preds: list[str] = []
+        pos_gts: list[str] = []
+        neg_preds: list[str] = []
+        neg_gts: list[str] = []
+        n_excluded = 0
+
+        for pred, gt, crop_id in zip(predictions, ground_truths, crop_ids, strict=True):
+            if crop_id not in sidecar:
+                n_excluded += 1
+                continue
+            feat_set = sidecar[crop_id]
+            if feature == "long_s":
+                present = feat_set.long_s
+            elif feature == "swash":
+                present = feat_set.swash
+            else:
+                kind = feature.removeprefix("ligature:")
+                present = kind in feat_set.ligatures
+
+            if present:
+                pos_preds.append(pred)
+                pos_gts.append(gt)
+            else:
+                neg_preds.append(pred)
+                neg_gts.append(gt)
+
+        n_pos = len(pos_preds)
+        n_neg = len(neg_preds)
+
+        cer_pos: float | None = _cer(pos_preds, pos_gts) if n_pos > 0 else None
+        cer_neg: float | None = _cer(neg_preds, neg_gts) if n_neg > 0 else None
+        wer_pos: float | None = _wer(pos_preds, pos_gts) if n_pos > 0 else None
+        wer_neg: float | None = _wer(neg_preds, neg_gts) if n_neg > 0 else None
+
+        delta_cer: float | None = (
+            (cer_pos - cer_neg) if (cer_pos is not None and cer_neg is not None) else None
+        )
+        delta_wer: float | None = (
+            (wer_pos - wer_neg) if (wer_pos is not None and wer_neg is not None) else None
+        )
+
+        slices.append(
+            EvalSlice(
+                feature=feature,
+                n_pos=n_pos,
+                n_neg=n_neg,
+                n_excluded=n_excluded,
+                cer_pos=cer_pos,
+                cer_neg=cer_neg,
+                wer_pos=wer_pos,
+                wer_neg=wer_neg,
+                delta_cer=delta_cer,
+                delta_wer=delta_wer,
+                low_support=n_pos < _LOW_SUPPORT_THRESHOLD,
+            )
+        )
+    return slices
+
+
+# ---------------------------------------------------------------------------
 # Public eval entry points
 # ---------------------------------------------------------------------------
 
@@ -429,20 +545,34 @@ def evaluate_recognition_impl(
     """
     start = time.monotonic()
     raw = _run_recognition_inference(profile, config)
-    predictions: list[str] = raw["predictions"]
-    ground_truths: list[str] = raw["ground_truths"]
+    predictions: list[str] = cast("list[str]", raw["predictions"])
+    ground_truths: list[str] = cast("list[str]", raw["ground_truths"])
     # crop_ids are threaded through by _run_recognition_inference for glyph
     # slicing (#8).  They are parallel to predictions / ground_truths.
     # cast() narrows the Any from dict[str, Any] subscription so basedpyright
     # does not emit reportAny on the right-hand side.
-    _crop_ids: list[str] = cast("list[str]", raw.get("crop_ids", []))
+    crop_ids: list[str] = cast("list[str]", raw.get("crop_ids", []))
+
+    # Glyph slice emission (#9): load sidecar and emit per-feature EvalSlices.
+    slices: list[EvalSlice] = []
+    if config.slice_glyph_features and config.glyph_annotations_path is not None:
+        # json.loads returns Any; cast to the expected mapping shape before
+        # iterating so basedpyright does not emit reportAny / reportExplicitAny.
+        sidecar_raw = cast(
+            "dict[str, object]", json.loads(config.glyph_annotations_path.read_text())
+        )
+        sidecar: dict[str, GlyphFeatureSet] = {
+            k: GlyphFeatureSet.model_validate(v) for k, v in sidecar_raw.items()
+        }
+        slices = _emit_glyph_slices(predictions, ground_truths, crop_ids, sidecar)
+
     return RecognitionEvalResult(
         cer=_cer(predictions, ground_truths),
         wer=_wer(predictions, ground_truths),
-        exact_match_rate=raw["exact_match_rate"],
-        slices=[],
-        sample_count=raw["sample_count"],
-        excluded_count=raw["excluded_count"],
+        exact_match_rate=cast("float", raw["exact_match_rate"]),
+        slices=slices,
+        sample_count=cast("int", raw["sample_count"]),
+        excluded_count=cast("int", raw["excluded_count"]),
         duration_seconds=time.monotonic() - start,
     )
 
