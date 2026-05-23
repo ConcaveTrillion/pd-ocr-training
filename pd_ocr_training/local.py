@@ -58,7 +58,8 @@ from __future__ import annotations
 import queue
 import threading
 import traceback
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Protocol, TypedDict
 
 from pd_ocr_training.detect import detect_from_config
 from pd_ocr_training.protocols import (
@@ -75,7 +76,88 @@ if TYPE_CHECKING:
 _DONE = object()
 
 
-def _translate_event(raw: dict[str, Any]) -> TrainingEvent:
+RawEvent = Mapping[str, object]
+ProgressHook = Callable[[RawEvent], None]
+
+
+class _DetectionKwargs(TypedDict):
+    train_path: str
+    val_path: str
+    arch: str
+    epochs: int
+    batch_size: int
+    lr: float
+    weight_decay: float
+    optimizer: str
+    scheduler: str
+    input_size: int
+    rotation: bool
+    workers: int
+    amp: bool
+    early_stop: bool
+    early_stop_epochs: int
+    early_stop_delta: float
+    output_dir: str
+    device: int | None
+    pretrained: bool
+    name: str
+    progress_hook: ProgressHook
+
+
+class _RecognitionKwargs(TypedDict):
+    train_path: str
+    val_path: str
+    arch: str
+    epochs: int
+    batch_size: int
+    lr: float
+    weight_decay: float
+    optimizer: str
+    scheduler: str
+    input_size: int
+    vocab: str
+    workers: int
+    amp: bool
+    early_stop: bool
+    early_stop_epochs: int
+    early_stop_delta: float
+    output_dir: str
+    device: int | None
+    pretrained: bool
+    name: str
+    progress_hook: ProgressHook
+
+
+class _TrainingCallable(Protocol):
+    def __call__(self, **kwargs: object) -> None: ...
+
+
+def _get_str(raw: RawEvent, key: str, default: str = "") -> str:
+    value = raw.get(key, default)
+    return value if isinstance(value, str) else default
+
+
+def _get_int(raw: RawEvent, key: str, default: int = 0) -> int:
+    value = raw.get(key, default)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
+
+
+def _event_data(raw: RawEvent) -> dict[str, object]:
+    return {k: v for k, v in raw.items() if k != "event"}
+
+
+def _translate_event(raw: RawEvent) -> TrainingEvent:
     """Translate a raw progress-hook dict into a typed ``TrainingEvent``.
 
     Args:
@@ -86,55 +168,55 @@ def _translate_event(raw: dict[str, Any]) -> TrainingEvent:
         A ``TrainingEvent`` with the translated ``kind`` and appropriate
         ``message``, ``progress``, and ``data`` fields.
     """
-    raw_kind: str = raw.get("event", "")
+    raw_kind = _get_str(raw, "event")
 
     if raw_kind == "log":
         return TrainingEvent(
             kind="log",
-            message=str(raw.get("message", "")),
+            message=_get_str(raw, "message"),
             data=None,
         )
 
     if raw_kind == "train_batch":
-        batch: int = int(raw.get("batch", 0))
-        total: int = int(raw.get("total_batches", 0))
+        batch = _get_int(raw, "batch")
+        total = _get_int(raw, "total_batches")
         return TrainingEvent(
             kind="metric",
             message=f"train batch {batch}/{total}",
-            data={k: v for k, v in raw.items() if k != "event"},
+            data=_event_data(raw),
         )
 
     if raw_kind == "val_batch":
-        batch = int(raw.get("batch", 0))
-        total = int(raw.get("total_batches", 0))
+        batch = _get_int(raw, "batch")
+        total = _get_int(raw, "total_batches")
         return TrainingEvent(
             kind="metric",
             message=f"val batch {batch}/{total}",
-            data={k: v for k, v in raw.items() if k != "event"},
+            data=_event_data(raw),
         )
 
     if raw_kind == "epoch_end":
-        epoch: int = int(raw.get("epoch", 0))
-        total_epochs: int = int(raw.get("total_epochs", 1))
+        epoch = _get_int(raw, "epoch")
+        total_epochs = _get_int(raw, "total_epochs", 1)
         progress: float = epoch / total_epochs if total_epochs > 0 else 0.0
         return TrainingEvent(
             kind="epoch",
             message=f"epoch {epoch}/{total_epochs}",
             progress=progress,
-            data={k: v for k, v in raw.items() if k != "event"},
+            data=_event_data(raw),
         )
 
     # Unknown raw kind — surface as a log event for observability.
     return TrainingEvent(
         kind="log",
         message=f"[{raw_kind}] {raw}",
-        data={k: v for k, v in raw.items() if k != "event"},
+        data=_event_data(raw),
     )
 
 
 def _run_in_thread(
-    fn: Any,
-    kwargs: dict[str, Any],
+    fn: _TrainingCallable,
+    kwargs: _DetectionKwargs | _RecognitionKwargs,
     event_queue: queue.Queue[object],
 ) -> None:
     """Launch ``fn(**kwargs)`` in a background thread.
@@ -180,6 +262,10 @@ class _WorkerError:
     tensor references attached to the original traceback frames.
     """
 
+    exc_type: str
+    message: str
+    tb_str: str
+
     def __init__(self, exc_type: str, message: str, tb_str: str) -> None:
         self.exc_type = exc_type
         self.message = message
@@ -189,8 +275,8 @@ class _WorkerError:
 def _build_detection_kwargs(
     profile: str,
     config: DetectionConfig,
-    hook: Any,
-) -> dict[str, Any]:
+    hook: ProgressHook,
+) -> _DetectionKwargs:
     """Build the kwargs dict for ``detect_from_config`` from a ``DetectionConfig``.
 
     Uses ``model_dump()`` so that every config field passes through
@@ -211,18 +297,36 @@ def _build_detection_kwargs(
     Returns:
         Keyword-argument dict ready to pass to ``detect_from_config(**kwargs)``.
     """
-    kwargs: dict[str, Any] = config.model_dump()
-    kwargs["name"] = config.name if config.name is not None else profile
-    kwargs["output_dir"] = str(config.output_dir)
-    kwargs["progress_hook"] = hook
-    return kwargs
+    return {
+        "train_path": str(config.train_path),
+        "val_path": str(config.val_path),
+        "arch": config.arch,
+        "epochs": config.epochs,
+        "batch_size": config.batch_size,
+        "lr": config.lr,
+        "weight_decay": config.weight_decay,
+        "optimizer": config.optimizer,
+        "scheduler": config.scheduler,
+        "input_size": config.input_size,
+        "rotation": config.rotation,
+        "workers": config.workers,
+        "amp": config.amp,
+        "early_stop": config.early_stop,
+        "early_stop_epochs": config.early_stop_epochs,
+        "early_stop_delta": config.early_stop_delta,
+        "output_dir": str(config.output_dir),
+        "device": config.device,
+        "pretrained": config.pretrained,
+        "name": config.name if config.name is not None else profile,
+        "progress_hook": hook,
+    }
 
 
 def _build_recognition_kwargs(
     profile: str,
     config: RecognitionConfig,
-    hook: Any,
-) -> dict[str, Any]:
+    hook: ProgressHook,
+) -> _RecognitionKwargs:
     """Build the kwargs dict for ``train_from_config`` from a ``RecognitionConfig``.
 
     Uses ``model_dump()`` so that every config field passes through
@@ -243,11 +347,29 @@ def _build_recognition_kwargs(
     Returns:
         Keyword-argument dict ready to pass to ``train_from_config(**kwargs)``.
     """
-    kwargs: dict[str, Any] = config.model_dump()
-    kwargs["name"] = config.name if config.name is not None else profile
-    kwargs["output_dir"] = str(config.output_dir)
-    kwargs["progress_hook"] = hook
-    return kwargs
+    return {
+        "train_path": str(config.train_path),
+        "val_path": str(config.val_path),
+        "arch": config.arch,
+        "epochs": config.epochs,
+        "batch_size": config.batch_size,
+        "lr": config.lr,
+        "weight_decay": config.weight_decay,
+        "optimizer": config.optimizer,
+        "scheduler": config.scheduler,
+        "input_size": config.input_size,
+        "vocab": config.vocab,
+        "workers": config.workers,
+        "amp": config.amp,
+        "early_stop": config.early_stop,
+        "early_stop_epochs": config.early_stop_epochs,
+        "early_stop_delta": config.early_stop_delta,
+        "output_dir": str(config.output_dir),
+        "device": config.device,
+        "pretrained": config.pretrained,
+        "name": config.name if config.name is not None else profile,
+        "progress_hook": hook,
+    }
 
 
 class LocalTrainingRunner:
@@ -307,7 +429,7 @@ class LocalTrainingRunner:
         """
         event_queue: queue.Queue[object] = queue.Queue()
 
-        def hook(raw: dict[str, Any]) -> None:
+        def hook(raw: RawEvent) -> None:
             event_queue.put(_translate_event(raw))
 
         kwargs = _build_detection_kwargs(profile, config, hook)
@@ -349,7 +471,7 @@ class LocalTrainingRunner:
         """
         event_queue: queue.Queue[object] = queue.Queue()
 
-        def hook(raw: dict[str, Any]) -> None:
+        def hook(raw: RawEvent) -> None:
             event_queue.put(_translate_event(raw))
 
         kwargs = _build_recognition_kwargs(profile, config, hook)
@@ -415,6 +537,6 @@ def _drain_queue(
             yield item
         else:
             raise TypeError(
-                f"Unexpected item type on training event queue: {type(item)!r}.  "
-                "Only TrainingEvent, _DONE, and _WorkerError are valid queue items."
+                f"Unexpected item type on training event queue: {type(item)!r}. "
+                + "Only TrainingEvent, _DONE, and _WorkerError are valid queue items."
             )

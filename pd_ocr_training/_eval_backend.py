@@ -60,7 +60,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, NotRequired, Protocol, TypedDict, cast
 
 from pd_ocr_training.protocols import (
     DetectionEvalResult,
@@ -70,6 +70,8 @@ from pd_ocr_training.protocols import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
+
     from pd_ocr_training.protocols import (
         DetectionEvalConfig,
         RecognitionEvalConfig,
@@ -77,6 +79,118 @@ if TYPE_CHECKING:
 
 # COCO-style IoU sweep used for the iou_50_95 metric.
 _IOU_SWEEP: tuple[float, ...] = (0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95)
+
+_DeviceSpec = str
+
+
+class _RecognitionInferenceOutput(TypedDict):
+    predictions: list[str]
+    ground_truths: list[str]
+    exact_match_rate: float
+    sample_count: int
+    excluded_count: int
+    crop_ids: NotRequired[list[str]]
+
+
+class _DetectionInferenceOutput(TypedDict):
+    precision: float
+    recall: float
+    iou_50: float
+    iou_50_95: float
+    sample_count: int
+    excluded_count: int
+
+
+class _TensorLike(Protocol):
+    def to(self, device: _DeviceSpec) -> object: ...
+
+
+class _RecognitionDatasetLike(Protocol):
+    data: list[tuple[object, str]]
+    collate_fn: object
+
+    def __len__(self) -> int: ...
+
+
+class _DetectionDatasetLike(Protocol):
+    class_names: list[str]
+    collate_fn: object
+
+    def __len__(self) -> int: ...
+
+
+class _RecognitionModelOutput(TypedDict):
+    preds: list[tuple[str, object]]
+
+
+class _DetectionModelOutput(TypedDict):
+    preds: list[Mapping[str, object]]
+
+
+class _RecognitionModelLike(Protocol):
+    def from_pretrained(self, path: str) -> None: ...
+
+    def to(self, device: _DeviceSpec) -> _RecognitionModelLike: ...
+
+    def eval(self) -> None: ...
+
+    def __call__(
+        self, batch: object, targets: Sequence[str], *, return_preds: bool
+    ) -> _RecognitionModelOutput: ...
+
+
+class _DetectionModelLike(Protocol):
+    def from_pretrained(self, path: str) -> None: ...
+
+    def to(self, device: _DeviceSpec) -> _DetectionModelLike: ...
+
+    def eval(self) -> None: ...
+
+    def __call__(
+        self,
+        batch: object,
+        targets: Sequence[Mapping[str, object]],
+        *,
+        return_preds: bool,
+    ) -> _DetectionModelOutput: ...
+
+
+class _RecognitionFactory(Protocol):
+    def __call__(self, *, pretrained: bool, vocab: str) -> _RecognitionModelLike: ...
+
+
+class _DetectionFactory(Protocol):
+    def __call__(
+        self,
+        *,
+        pretrained: bool,
+        assume_straight_pages: bool,
+        class_names: list[str],
+    ) -> _DetectionModelLike: ...
+
+
+class _DataLoaderFactory(Protocol):
+    def __call__(
+        self,
+        dataset: object,
+        *,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        sampler: object,
+        pin_memory: bool,
+        collate_fn: object,
+    ) -> Iterable[object]: ...
+
+
+class _SequentialSamplerFactory(Protocol):
+    def __call__(self, data_source: object) -> object: ...
+
+
+class _LocalizationMetricLike(Protocol):
+    def update(self, *, gts: object, preds: object) -> None: ...
+
+    def summary(self) -> tuple[float | None, float | None, float | None]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +301,7 @@ def _f1(precision: float, recall: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _select_device(device_index: int | None) -> Any:
+def _select_device(device_index: int | None) -> _DeviceSpec:
     """Resolve the torch device for an eval run.
 
     Args:
@@ -195,7 +309,7 @@ def _select_device(device_index: int | None) -> Any:
             (CUDA device 0 if available, else CPU).
 
     Returns:
-        A ``torch.device``.
+        A device string accepted by torch APIs (for example ``"cuda:0"``).
 
     Raises:
         RuntimeError: When an explicit index is given but no GPU is accessible
@@ -208,16 +322,16 @@ def _select_device(device_index: int | None) -> Any:
             raise RuntimeError("A device index was given but no GPU is accessible.")
         if device_index >= torch.cuda.device_count():
             raise RuntimeError(f"Invalid CUDA device index: {device_index}")
-        return torch.device("cuda", device_index)
+        return f"cuda:{device_index}"
     if torch.cuda.is_available():
-        return torch.device("cuda", 0)
-    return torch.device("cpu")
+        return "cuda:0"
+    return "cpu"
 
 
 def _run_recognition_inference(
-    profile: str,
+    _profile: str,
     config: RecognitionEvalConfig,
-) -> dict[str, Any]:
+) -> _RecognitionInferenceOutput:
     """Run the recognition forward pass over the validation set.
 
     Builds the DocTR recognition model and validation DataLoader, restores the
@@ -236,7 +350,6 @@ def _run_recognition_inference(
     from doctr.datasets import VOCABS, RecognitionDataset
     from doctr.models import recognition
     from torch.utils.data import DataLoader, SequentialSampler
-    from torchvision.transforms.v2 import Normalize
 
     device = _select_device(config.device)
     vocab = (
@@ -245,27 +358,39 @@ def _run_recognition_inference(
         else VOCABS.get(config.vocab, config.vocab)
     )
 
-    val_set = RecognitionDataset(
+    val_set_raw = RecognitionDataset(
         img_folder=os.path.join(str(config.val_path), "images"),
         labels_path=os.path.join(str(config.val_path), "labels.json"),
         img_transforms=t.Resize(
             (config.input_size, 4 * config.input_size), preserve_aspect_ratio=True
         ),
     )
-    val_loader = DataLoader(
-        # DocTR's RecognitionDataset is a torch-compatible Dataset at runtime;
-        # its bundled stubs do not declare the torch Dataset base class.
-        val_set,  # pyright: ignore[reportArgumentType]
-        batch_size=config.batch_size,
-        drop_last=False,
-        num_workers=config.workers,
-        sampler=SequentialSampler(val_set),  # pyright: ignore[reportArgumentType]
-        pin_memory=torch.cuda.is_available(),
-        collate_fn=val_set.collate_fn,
+    val_set = cast(
+        "_RecognitionDatasetLike",
+        cast(
+            "object",
+            val_set_raw,
+        ),
     )
-    batch_transforms = Normalize(mean=(0.694, 0.695, 0.693), std=(0.299, 0.296, 0.301))
+    data_loader = cast("_DataLoaderFactory", cast("object", DataLoader))
+    sequential_sampler = cast("_SequentialSamplerFactory", cast("object", SequentialSampler))
+    val_loader = cast(
+        "Iterable[tuple[_TensorLike, list[str]]]",
+        data_loader(
+            val_set_raw,
+            batch_size=config.batch_size,
+            drop_last=False,
+            num_workers=config.workers,
+            sampler=sequential_sampler(val_set_raw),
+            pin_memory=torch.cuda.is_available(),
+            collate_fn=val_set.collate_fn,
+        ),
+    )
+    norm_mean = (0.694, 0.695, 0.693)
+    norm_std = (0.299, 0.296, 0.301)
 
-    model = recognition.__dict__[config.arch](pretrained=False, vocab=vocab)
+    model_factory = cast("_RecognitionFactory", recognition.__dict__[config.arch])
+    model = model_factory(pretrained=False, vocab=vocab)
     model.from_pretrained(str(config.model_path))
     model = model.to(device)
     model.eval()
@@ -286,13 +411,16 @@ def _run_recognition_inference(
     sample_idx = 0
     with torch.no_grad():
         for images, targets in val_loader:
-            batch = batch_transforms(images.to(device))
+            image_tensor = cast("torch.Tensor", images.to(device))
+            mean_tensor = image_tensor.new_tensor(norm_mean).view(1, 3, 1, 1)
+            std_tensor = image_tensor.new_tensor(norm_std).view(1, 3, 1, 1)
+            batch: object = (image_tensor - mean_tensor) / std_tensor
             if config.amp:
-                with torch.amp.autocast("cuda"):
+                with torch.autocast("cuda"):
                     out = model(batch, targets, return_preds=True)
             else:
                 out = model(batch, targets, return_preds=True)
-            words = [w for w, _ in out["preds"]] if out["preds"] else []
+            words = [word for word, _score in out["preds"]]
             for pred, gt in zip(words, targets, strict=False):
                 predictions.append(pred)
                 ground_truths.append(gt)
@@ -313,9 +441,9 @@ def _run_recognition_inference(
 
 
 def _run_detection_inference(
-    profile: str,
+    _profile: str,
     config: DetectionEvalConfig,
-) -> dict[str, Any]:
+) -> _DetectionInferenceOutput:
     """Run the detection forward pass over the validation set.
 
     Builds the DocTR detection model and validation DataLoader, restores the
@@ -337,7 +465,6 @@ def _run_detection_inference(
     from doctr.models import detection
     from doctr.utils.metrics import LocalizationConfusion
     from torch.utils.data import DataLoader, SequentialSampler
-    from torchvision.transforms.v2 import Normalize
 
     device = _select_device(config.device)
 
@@ -359,26 +486,38 @@ def _run_detection_inference(
             ),
         ]
     )
-    val_set = DetectionDataset(
+    val_set_raw = DetectionDataset(
         img_folder=os.path.join(str(config.val_path), "images"),
         label_path=os.path.join(str(config.val_path), "labels.json"),
         sample_transforms=t.SampleCompose(sample_transforms),
         use_polygons=config.rotation,
     )
-    val_loader = DataLoader(
-        # DocTR's DetectionDataset is a torch-compatible Dataset at runtime;
-        # its bundled stubs do not declare the torch Dataset base class.
-        val_set,  # pyright: ignore[reportArgumentType]
-        batch_size=config.batch_size,
-        drop_last=False,
-        num_workers=config.workers,
-        sampler=SequentialSampler(val_set),  # pyright: ignore[reportArgumentType]
-        pin_memory=torch.cuda.is_available(),
-        collate_fn=val_set.collate_fn,
+    val_set = cast(
+        "_DetectionDatasetLike",
+        cast(
+            "object",
+            val_set_raw,
+        ),
     )
-    batch_transforms = Normalize(mean=(0.798, 0.785, 0.772), std=(0.264, 0.2749, 0.287))
+    data_loader = cast("_DataLoaderFactory", cast("object", DataLoader))
+    sequential_sampler = cast("_SequentialSamplerFactory", cast("object", SequentialSampler))
+    val_loader = cast(
+        "Iterable[tuple[_TensorLike, list[Mapping[str, object]]]]",
+        data_loader(
+            val_set_raw,
+            batch_size=config.batch_size,
+            drop_last=False,
+            num_workers=config.workers,
+            sampler=sequential_sampler(val_set_raw),
+            pin_memory=torch.cuda.is_available(),
+            collate_fn=val_set.collate_fn,
+        ),
+    )
+    norm_mean = (0.798, 0.785, 0.772)
+    norm_std = (0.264, 0.2749, 0.287)
 
-    model = detection.__dict__[config.arch](
+    model_factory = cast("_DetectionFactory", detection.__dict__[config.arch])
+    model = model_factory(
         pretrained=False,
         assume_straight_pages=not config.rotation,
         class_names=val_set.class_names,
@@ -387,26 +526,39 @@ def _run_detection_inference(
     model = model.to(device)
     model.eval()
 
-    metrics = {
-        thresh: LocalizationConfusion(iou_thresh=thresh, use_polygons=config.rotation)
+    metrics: dict[float, _LocalizationMetricLike] = {
+        thresh: cast(
+            "_LocalizationMetricLike",
+            cast(
+                "object",
+                LocalizationConfusion(iou_thresh=thresh, use_polygons=config.rotation),
+            ),
+        )
         for thresh in _IOU_SWEEP
     }
     with torch.no_grad():
         for images, targets in val_loader:
-            batch = batch_transforms(images.to(device))
+            image_tensor = cast("torch.Tensor", images.to(device))
+            mean_tensor = image_tensor.new_tensor(norm_mean).view(1, 3, 1, 1)
+            std_tensor = image_tensor.new_tensor(norm_std).view(1, 3, 1, 1)
+            batch: object = (image_tensor - mean_tensor) / std_tensor
             if config.amp:
-                with torch.amp.autocast("cuda"):
+                with torch.autocast("cuda"):
                     out = model(batch, targets, return_preds=True)
             else:
                 out = model(batch, targets, return_preds=True)
             for target, loc_pred in zip(targets, out["preds"], strict=False):
-                for boxes_gt, boxes_pred in zip(target.values(), loc_pred.values(), strict=False):
-                    boxes = boxes_pred
-                    if isinstance(boxes, np.ndarray) and boxes.ndim == 2 and boxes.shape[1] == 5:
+                for boxes_gt_obj, boxes_pred_obj in zip(
+                    target.values(), loc_pred.values(), strict=False
+                ):
+                    boxes = cast(
+                        "np.ndarray[tuple[int, ...], np.dtype[np.float64]]", boxes_pred_obj
+                    )
+                    if boxes.ndim == 2 and boxes.shape[1] == 5:
                         boxes = boxes[:, :4]
-                    preds = boxes if len(boxes) else np.zeros((0, 4))
+                    preds = boxes if len(boxes) else np.zeros((0, 4), dtype=np.float64)
                     for metric in metrics.values():
-                        metric.update(gts=boxes_gt, preds=preds)
+                        metric.update(gts=boxes_gt_obj, preds=preds)
 
     recall_50, precision_50, iou_50 = metrics[0.50].summary()
     mean_ious = [metrics[thresh].summary()[2] or 0.0 for thresh in _IOU_SWEEP]
@@ -545,13 +697,11 @@ def evaluate_recognition_impl(
     """
     start = time.monotonic()
     raw = _run_recognition_inference(profile, config)
-    predictions: list[str] = cast("list[str]", raw["predictions"])
-    ground_truths: list[str] = cast("list[str]", raw["ground_truths"])
+    predictions = raw["predictions"]
+    ground_truths = raw["ground_truths"]
     # crop_ids are threaded through by _run_recognition_inference for glyph
     # slicing (#8).  They are parallel to predictions / ground_truths.
-    # cast() narrows the Any from dict[str, Any] subscription so basedpyright
-    # does not emit reportAny on the right-hand side.
-    crop_ids: list[str] = cast("list[str]", raw.get("crop_ids", []))
+    crop_ids = raw.get("crop_ids", [])
 
     # Glyph slice emission (#9): load sidecar and emit per-feature EvalSlices.
     slices: list[EvalSlice] = []
@@ -569,10 +719,10 @@ def evaluate_recognition_impl(
     return RecognitionEvalResult(
         cer=_cer(predictions, ground_truths),
         wer=_wer(predictions, ground_truths),
-        exact_match_rate=cast("float", raw["exact_match_rate"]),
+        exact_match_rate=raw["exact_match_rate"],
         slices=slices,
-        sample_count=cast("int", raw["sample_count"]),
-        excluded_count=cast("int", raw["excluded_count"]),
+        sample_count=raw["sample_count"],
+        excluded_count=raw["excluded_count"],
         duration_seconds=time.monotonic() - start,
     )
 

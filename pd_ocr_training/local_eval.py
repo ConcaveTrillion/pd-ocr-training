@@ -35,9 +35,11 @@ either function without it raises ``ImportError`` from the lazy import.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pd_ocr_training.protocols import (
         DetectionEvalConfig,
         DetectionEvalResult,
@@ -46,12 +48,50 @@ if TYPE_CHECKING:
     )
 
 
+class _DetectionEvalKwargs(TypedDict):
+    val_path: str | Path
+    model_path: str | Path
+    arch: str
+    batch_size: int
+    input_size: int
+    rotation: bool
+    workers: int
+    amp: bool
+    device: int | None
+    profile: str
+
+
+class _RecognitionEvalKwargs(TypedDict):
+    val_path: str | Path
+    model_path: str | Path
+    arch: str
+    batch_size: int
+    input_size: int
+    vocab: str
+    workers: int
+    amp: bool
+    device: int | None
+    profile: str
+
+
 # ---------------------------------------------------------------------------
 # Eval entry points -- delegate to the lazily-imported DocTR backend
 # ---------------------------------------------------------------------------
 
 
-def evaluate_detection_from_config(**kwargs: Any) -> DetectionEvalResult:
+def evaluate_detection_from_config(
+    *,
+    val_path: str | Path,
+    model_path: str | Path,
+    arch: str = "db_resnet50",
+    batch_size: int = 2,
+    input_size: int = 1024,
+    rotation: bool = False,
+    workers: int = 4,
+    amp: bool = False,
+    device: int | None = None,
+    profile: str = "eval",
+) -> DetectionEvalResult:
     """Run a detection evaluation pass via the real DocTR backend.
 
     Reconstructs a :class:`DetectionEvalConfig` from the flattened kwargs and
@@ -60,8 +100,16 @@ def evaluate_detection_from_config(**kwargs: Any) -> DetectionEvalResult:
     stays torch-free.
 
     Args:
-        **kwargs: Detection eval kwargs forwarded from ``LocalEvalRunner`` --
-            the ``DetectionEvalConfig`` fields plus a ``profile`` key.
+        val_path: Validation dataset path.
+        model_path: Checkpoint path.
+        arch: DocTR detection architecture name.
+        batch_size: Eval batch size.
+        input_size: Square input image size.
+        rotation: Whether to evaluate rotated/polygon detection.
+        workers: DataLoader worker count.
+        amp: Whether to use automatic mixed precision.
+        device: CUDA device index, or ``None`` for auto-selection.
+        profile: Logical run identifier.
 
     Returns:
         A populated ``DetectionEvalResult``.
@@ -72,12 +120,35 @@ def evaluate_detection_from_config(**kwargs: Any) -> DetectionEvalResult:
     from pd_ocr_training import _eval_backend
     from pd_ocr_training.protocols import DetectionEvalConfig
 
-    profile = kwargs.pop("profile", "eval")
-    config = DetectionEvalConfig.model_validate(kwargs)
+    config = DetectionEvalConfig.model_validate(
+        {
+            "val_path": val_path,
+            "model_path": model_path,
+            "arch": arch,
+            "batch_size": batch_size,
+            "input_size": input_size,
+            "rotation": rotation,
+            "workers": workers,
+            "amp": amp,
+            "device": device,
+        }
+    )
     return _eval_backend.evaluate_detection_impl(profile, config)
 
 
-def evaluate_recognition_from_config(**kwargs: Any) -> RecognitionEvalResult:
+def evaluate_recognition_from_config(
+    *,
+    val_path: str | Path,
+    model_path: str | Path,
+    arch: str = "crnn_vgg16_bn",
+    batch_size: int = 64,
+    input_size: int = 32,
+    vocab: str = "french",
+    workers: int = 4,
+    amp: bool = False,
+    device: int | None = None,
+    profile: str = "eval",
+) -> RecognitionEvalResult:
     """Run a recognition evaluation pass via the real DocTR backend.
 
     Reconstructs a :class:`RecognitionEvalConfig` from the flattened kwargs and
@@ -86,8 +157,16 @@ def evaluate_recognition_from_config(**kwargs: Any) -> RecognitionEvalResult:
     stays torch-free.
 
     Args:
-        **kwargs: Recognition eval kwargs forwarded from ``LocalEvalRunner`` --
-            the ``RecognitionEvalConfig`` fields plus a ``profile`` key.
+        val_path: Validation dataset path.
+        model_path: Checkpoint path.
+        arch: DocTR recognition architecture name.
+        batch_size: Eval batch size.
+        input_size: Recognition input height.
+        vocab: DocTR vocab name or custom vocab string.
+        workers: DataLoader worker count.
+        amp: Whether to use automatic mixed precision.
+        device: CUDA device index, or ``None`` for auto-selection.
+        profile: Logical run identifier.
 
     Returns:
         A populated ``RecognitionEvalResult``.
@@ -98,8 +177,19 @@ def evaluate_recognition_from_config(**kwargs: Any) -> RecognitionEvalResult:
     from pd_ocr_training import _eval_backend
     from pd_ocr_training.protocols import RecognitionEvalConfig
 
-    profile = kwargs.pop("profile", "eval")
-    config = RecognitionEvalConfig.model_validate(kwargs)
+    config = RecognitionEvalConfig.model_validate(
+        {
+            "val_path": val_path,
+            "model_path": model_path,
+            "arch": arch,
+            "batch_size": batch_size,
+            "input_size": input_size,
+            "vocab": vocab,
+            "workers": workers,
+            "amp": amp,
+            "device": device,
+        }
+    )
     return _eval_backend.evaluate_recognition_impl(profile, config)
 
 
@@ -111,7 +201,7 @@ def evaluate_recognition_from_config(**kwargs: Any) -> RecognitionEvalResult:
 def _build_detection_eval_kwargs(
     profile: str,
     config: DetectionEvalConfig,
-) -> dict[str, Any]:
+) -> _DetectionEvalKwargs:
     """Build the kwargs dict for ``evaluate_detection_from_config``.
 
     Args:
@@ -123,17 +213,24 @@ def _build_detection_eval_kwargs(
         Keyword-argument dict ready to pass to
         ``evaluate_detection_from_config(**kwargs)``.
     """
-    kwargs: dict[str, Any] = config.model_dump()
-    kwargs["profile"] = profile
-    kwargs["val_path"] = str(config.val_path)
-    kwargs["model_path"] = str(config.model_path)
-    return kwargs
+    return {
+        "val_path": str(config.val_path),
+        "model_path": str(config.model_path),
+        "arch": config.arch,
+        "batch_size": config.batch_size,
+        "input_size": config.input_size,
+        "rotation": config.rotation,
+        "workers": config.workers,
+        "amp": config.amp,
+        "device": config.device,
+        "profile": profile,
+    }
 
 
 def _build_recognition_eval_kwargs(
     profile: str,
     config: RecognitionEvalConfig,
-) -> dict[str, Any]:
+) -> _RecognitionEvalKwargs:
     """Build the kwargs dict for ``evaluate_recognition_from_config``.
 
     Args:
@@ -144,11 +241,18 @@ def _build_recognition_eval_kwargs(
         Keyword-argument dict ready to pass to
         ``evaluate_recognition_from_config(**kwargs)``.
     """
-    kwargs: dict[str, Any] = config.model_dump()
-    kwargs["profile"] = profile
-    kwargs["val_path"] = str(config.val_path)
-    kwargs["model_path"] = str(config.model_path)
-    return kwargs
+    return {
+        "val_path": str(config.val_path),
+        "model_path": str(config.model_path),
+        "arch": config.arch,
+        "batch_size": config.batch_size,
+        "input_size": config.input_size,
+        "vocab": config.vocab,
+        "workers": config.workers,
+        "amp": config.amp,
+        "device": config.device,
+        "profile": profile,
+    }
 
 
 class LocalEvalRunner:

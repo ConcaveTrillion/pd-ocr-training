@@ -83,9 +83,8 @@ def __getattr__(name: str) -> object:
             from pd_ocr_training.local import LocalTrainingRunner
         except ModuleNotFoundError as exc:  # pragma: no cover - env-dependent
             raise ImportError(
-                "LocalTrainingRunner requires the optional training stack "
-                "(torch / DocTR). Install it with: pip install "
-                "'pd-ocr-training[train]'"
+                "LocalTrainingRunner requires the optional training stack (torch / DocTR). "
+                + "Install it with: pip install 'pd-ocr-training[train]'"
             ) from exc
         return LocalTrainingRunner
     if name == "LocalEvalRunner":
@@ -93,9 +92,8 @@ def __getattr__(name: str) -> object:
             from pd_ocr_training.local_eval import LocalEvalRunner
         except ModuleNotFoundError as exc:  # pragma: no cover - env-dependent
             raise ImportError(
-                "LocalEvalRunner requires the optional training stack "
-                "(torch / DocTR). Install it with: pip install "
-                "'pd-ocr-training[train]'"
+                "LocalEvalRunner requires the optional training stack (torch / DocTR). "
+                + "Install it with: pip install 'pd-ocr-training[train]'"
             ) from exc
         return LocalEvalRunner
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
