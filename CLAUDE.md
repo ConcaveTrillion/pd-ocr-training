@@ -83,6 +83,9 @@ make local-setup        # clone any missing sibling pd-* repos
 make local-dev          # switch to local-dev mode (editable ../pd-book-tools + marker)
 make local-check        # print local-dev mode + per-sibling resolution
 make local-upgrade-deps # upgrade deps then restore editables (local-mode only)
+
+# sibling-dep refresh (spec #363) — see ../docs/process/update-pd-deps.md
+make update-pd-deps     # bump pd-* sibling deps to registry latest; leaves diff for review
 ```
 
 Run any command with `uv run` directly if preferred:

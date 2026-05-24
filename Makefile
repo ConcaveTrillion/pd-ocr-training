@@ -17,6 +17,7 @@ else
         pre-commit-check upgrade-deps \
         local-setup local-dev local-check local-upgrade-deps \
         dev-local \
+        update-pd-deps \
         release-patch release-minor release-major _do-release
 
 help: ## Show this help message
@@ -71,6 +72,11 @@ upgrade-deps: ## Upgrade dependencies and sync local environment
 dev-local: ## DEPRECATED: use local-dev
 	@echo "warning: 'dev-local' is deprecated; use 'local-dev'"
 	@$(MAKE) --no-print-directory local-dev
+
+# ─── sibling-dep refresh (spec #363) ─────────────────────────────────────────
+
+update-pd-deps: ## Bump pd-* sibling deps to registry latest; leaves diff for review
+	@./scripts/update-pd-deps.sh
 
 # ─── local-dev workflow (spec #362) ──────────────────────────────────────────
 
