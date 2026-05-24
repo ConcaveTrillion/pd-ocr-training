@@ -12,24 +12,11 @@ $(_goals):
 
 else
 
-# ---------------------------------------------------------------------------
-# Peer-repo discovery for dev-local target
-# ---------------------------------------------------------------------------
-PEER_BOOK_TOOLS_PATH := ../pd-book-tools
-PEER_BOOK_TOOLS := $(realpath $(PEER_BOOK_TOOLS_PATH))
-
-define _require_peer_book_tools
-	@if [ -z "$(PEER_BOOK_TOOLS)" ]; then \
-		echo ""; \
-		echo "❌  Cannot find pd-book-tools at $(PEER_BOOK_TOOLS_PATH)"; \
-		echo "    Clone it first:  git clone https://github.com/ConcaveTrillion/pd-book-tools.git ../pd-book-tools"; \
-		echo ""; \
-		exit 1; \
-	fi
-endef
 
 .PHONY: help setup lint lint-check format format-check typecheck test ci build clean \
-        pre-commit-check upgrade-deps dev-local \
+        pre-commit-check upgrade-deps \
+        local-setup local-dev local-check local-upgrade-deps \
+        dev-local \
         release-patch release-minor release-major _do-release
 
 help: ## Show this help message
@@ -81,14 +68,23 @@ upgrade-deps: ## Upgrade dependencies and sync local environment
 	uv sync --group dev
 	@echo "Dependencies upgraded and environment synced."
 
-dev-local: ## [local-dev] Install pd-book-tools from ../pd-book-tools as editable in the venv
-	$(call _require_peer_book_tools)
-	@echo "Installing pd-book-tools editable from $(PEER_BOOK_TOOLS)..."
-	UV_LINK_MODE=copy uv pip install -e "$(PEER_BOOK_TOOLS)"
-	UV_LINK_MODE=copy uv pip install -e . --no-deps
-	UV_LINK_MODE=copy uv pip install --group dev
-	@touch .venv/.pd-dev-local
-	@echo "Local editable pd-book-tools is active in the venv."
+dev-local: ## DEPRECATED: use local-dev
+	@echo "warning: 'dev-local' is deprecated; use 'local-dev'"
+	@$(MAKE) --no-print-directory local-dev
+
+# ─── local-dev workflow (spec #362) ──────────────────────────────────────────
+
+local-setup: ## Clone any missing sibling pd-* repos into the workspace
+	@./scripts/local-setup.sh
+
+local-dev: ## Switch to local-dev mode (siblings editable + marker)
+	@./scripts/local-dev.sh
+
+local-check: ## Print local-dev mode status + per-sibling resolution
+	@./scripts/local-check.sh
+
+local-upgrade-deps: ## Upgrade deps then restore editable siblings (local-mode only)
+	@./scripts/local-upgrade-deps.sh
 
 clean: ## Clean cache and temporary files
 	rm -rf dist .venv .pytest_cache .ruff_cache .ci-ai.log htmlcov
