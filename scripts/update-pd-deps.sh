@@ -19,7 +19,7 @@ PD_INDEX_NPM="https://concavetrillion.github.io/pd-index-npm"
 # ─────────────────────────────────────────────────────────────────────────────
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --git-common-dir)"
+GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)"
 CANONICAL_REPO_ROOT="$(dirname "$GIT_COMMON_DIR")"
 MARKER="$CANONICAL_REPO_ROOT/.venv/.pd-local-mode"
 
