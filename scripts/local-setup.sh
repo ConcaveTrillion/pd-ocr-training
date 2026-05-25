@@ -10,7 +10,7 @@ SIBLINGS=(pd-book-tools)
 
 # Workspace root = parent of the canonical git repo dir (works in both normal checkouts and worktrees).
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --git-common-dir)"
+GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)"
 CANONICAL_REPO_ROOT="$(dirname "$GIT_COMMON_DIR")"
 WORKSPACE_ROOT="$(dirname "$CANONICAL_REPO_ROOT")"
 
