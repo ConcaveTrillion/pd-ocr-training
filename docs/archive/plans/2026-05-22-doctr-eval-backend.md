@@ -1,6 +1,6 @@
 # Plan: Real DocTR eval backend for LocalEvalRunner
 
-**Issue:** ConcaveTrillion/pd-ocr-training#3
+**Issue:** ConcaveTrillion/pdomain-ocr-training#3
 **Date:** 2026-05-22
 
 ## Goal
