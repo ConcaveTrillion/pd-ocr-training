@@ -1,9 +1,9 @@
-"""Training and evaluation runner Protocols and supporting data models for pd-ocr-training.
+"""Training and evaluation runner Protocols and supporting data models for pdomain-ocr-training.
 
 Design rationale
 ----------------
 The ``ITrainingRunner`` and ``IEvalRunner`` Protocols mirror the workspace idiom
-established in ``pd-ocr-ops`` (see ``pd_ocr_ops.gpu.protocols``): a
+established in ``pdomain-ocr-ops`` (see ``pdomain_ocr_ops.gpu.protocols``): a
 ``@runtime_checkable`` ``Protocol`` defines the contract; a ``Local*``
 implementation ships separately so consumer apps depend only on the interface.
 
@@ -18,7 +18,7 @@ Training and evaluation are separate concerns with different call shapes:
   unnecessary overhead.
 
 Keeping them separate follows the Single-Responsibility Principle and mirrors
-the multi-Protocol pattern used in ``pd-ocr-ops``
+the multi-Protocol pattern used in ``pdomain-ocr-ops``
 (``StageDispatcher`` / ``LongJobRunner``).
 
 Config-type decision
@@ -31,7 +31,7 @@ classes (``DetectionConfig`` / ``RecognitionConfig``) rather than raw
 
 1. Typed models give IDE completion and inline validation.
 2. The parameter shapes are stable (no dynamic keys).
-3. Pydantic v2 is already a workspace dependency (used throughout pd-ocr-ops).
+3. Pydantic v2 is already a workspace dependency (used throughout pdomain-ocr-ops).
 
 The two configs are intentionally separate because the tasks have different
 required parameters: detection uses ``rotation`` and ``input_size=1024``;
@@ -266,11 +266,11 @@ class ITrainingRunner(Protocol):
 
 
 class GlyphFeatureSet(BaseModel):
-    """Per-word glyph feature presence, decoupled from pd-book-tools.
+    """Per-word glyph feature presence, decoupled from pdomain-book-tools.
 
     Carries only the three feature-presence facts that recognition eval needs.
-    The caller (``pd-ocr-trainer-spa``) derives this from ``pd-book-tools``
-    ``GlyphAnnotations``; ``pd-ocr-training`` never imports ``GlyphAnnotations``
+    The caller (``pdomain-ocr-trainer-spa``) derives this from ``pdomain-book-tools``
+    ``GlyphAnnotations``; ``pdomain-ocr-training`` never imports ``GlyphAnnotations``
     itself — that would add a heavy foundation-lib dependency edge.
 
     A JSON sidecar passed to :class:`RecognitionEvalConfig` is a single
@@ -413,7 +413,7 @@ class RecognitionEvalResult(BaseModel):
     """Overall + per-slice recognition evaluation results.
 
     Returned synchronously by ``IEvalRunner.evaluate_recognition``.  Field
-    names and semantics are aligned with the pd-ocr-trainer-spa M7 worker
+    names and semantics are aligned with the pdomain-ocr-trainer-spa M7 worker
     so the adapter mapping is trivial.
 
     Attributes:

@@ -1,8 +1,8 @@
-# pd-ocr-training
+# pdomain-ocr-training
 
 DocTR OCR model training and evaluation pipeline for the `pd-*` OCR suite.
 
-This package owns all torch/DocTR training code — detection and recognition model fine-tuning, dataset management, model export, and evaluation. Isolating torch here keeps every other `pd-*` SPA backend (e.g. `pd-ocr-labeler-spa`, `pd-prep-for-pgdp`) torch-free and deployment-lightweight.
+This package owns all torch/DocTR training code — detection and recognition model fine-tuning, dataset management, model export, and evaluation. Isolating torch here keeps every other `pd-*` SPA backend (e.g. `pdomain-ocr-labeler-spa`, `pdomain-prep-for-pgdp`) torch-free and deployment-lightweight.
 
 Supersedes the legacy `pd-ocr-trainer` repo.
 
@@ -14,12 +14,12 @@ so the base install stays torch-free.
 ```bash
 # Base — torch-free. Exposes the typed config models, ITrainingRunner,
 # IEvalRunner, and LocalEvalRunner. Use this in a long-lived web process
-# (e.g. pd-ocr-trainer-spa) that injects the runners but does not train.
-pip install pd-ocr-training
+# (e.g. pdomain-ocr-trainer-spa) that injects the runners but does not train.
+pip install pdomain-ocr-training
 
 # Full training stack — adds torch / DocTR / matplotlib and makes
 # LocalTrainingRunner usable. Use this in the training worker process.
-pip install 'pd-ocr-training[train]'
+pip install 'pdomain-ocr-training[train]'
 ```
 
 ## Protocols and concrete runners
@@ -31,7 +31,7 @@ Two sibling Protocols, each with a concrete implementation:
 | `ITrainingRunner` | `LocalTrainingRunner` | `[train]` extra required |
 | `IEvalRunner` | `LocalEvalRunner` | base (torch-free); real DocTR eval stubs pending |
 
-`LocalTrainingRunner` is exported lazily — importing `pd_ocr_training` does
+`LocalTrainingRunner` is exported lazily — importing `pdomain_ocr_training` does
 **not** pull in torch. Accessing it without the `[train]` extra raises a clear
 `ImportError`. `LocalEvalRunner` is torch-free and importable in the base
 install; its underlying eval entry points currently raise `NotImplementedError`
@@ -40,7 +40,7 @@ pending the real DocTR eval backend implementation.
 ### Torch-free usage (config models + Protocols)
 
 ```python
-from pd_ocr_training import (
+from pdomain_ocr_training import (
     DetectionConfig,
     DetectionEvalConfig,
     IEvalRunner,
@@ -64,7 +64,7 @@ def run_eval(runner: IEvalRunner, cfg: RecognitionEvalConfig) -> None:
 ### Full training usage (`[train]` extra)
 
 ```python
-from pd_ocr_training import DetectionConfig, ITrainingRunner, LocalTrainingRunner
+from pdomain_ocr_training import DetectionConfig, ITrainingRunner, LocalTrainingRunner
 
 runner: ITrainingRunner = LocalTrainingRunner()
 cfg = DetectionConfig(train_path="data/train", val_path="data/val")
@@ -75,7 +75,7 @@ for event in runner.train_detection("my-run", cfg):
 ### Eval usage (torch-free; real impl pending)
 
 ```python
-from pd_ocr_training import IEvalRunner, LocalEvalRunner, RecognitionEvalConfig
+from pdomain_ocr_training import IEvalRunner, LocalEvalRunner, RecognitionEvalConfig
 
 runner: IEvalRunner = LocalEvalRunner()
 cfg = RecognitionEvalConfig(val_path="data/val", model_path="checkpoints/best.pt")

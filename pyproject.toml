@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pd-ocr-training"
+name = "pdomain-ocr-training"
 version = "0.2.2"
 description = "DocTR OCR model training pipeline for the pd-* OCR suite"
 authors = [{ name = "CT", email = "concavetrillion@gmail.com" }]
@@ -11,16 +11,16 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "pd-book-tools>=0.14.1",
+    "pdomain-book-tools>=0.14.1",
     "pydantic>=2.5",
     "tomli>=2.0",
     "tomli-w>=1.0",
 ]
 
 # The heavy training stack (torch / DocTR / matplotlib) is optional. The base
-# install is torch-free so a downstream web process (e.g. pd-ocr-trainer-spa)
+# install is torch-free so a downstream web process (e.g. pdomain-ocr-trainer-spa)
 # can import the typed config models and the ITrainingRunner Protocol without
-# pulling multi-GB ML deps. Install `pd-ocr-training[train]` to get the full
+# pulling multi-GB ML deps. Install `pdomain-ocr-training[train]` to get the full
 # LocalTrainingRunner / DocTR training stack.
 [project.optional-dependencies]
 train = [
@@ -32,23 +32,23 @@ train = [
 ]
 
 [project.scripts]
-pd-ocr-training-detect = "pd_ocr_training.detect:main"
-pd-ocr-training-recog = "pd_ocr_training.recog:main"
+pdomain-ocr-training-detect = "pdomain_ocr_training.detect:main"
+pdomain-ocr-training-recog = "pdomain_ocr_training.recog:main"
 
 [project.urls]
-Homepage = "https://github.com/ConcaveTrillion/pd-ocr-training"
-Source = "https://github.com/ConcaveTrillion/pd-ocr-training"
+Homepage = "https://github.com/pdomain/pdomain-ocr-training"
+Source = "https://github.com/pdomain/pdomain-ocr-training"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pd_ocr_training"]
+packages = ["pdomain_ocr_training"]
 
 [[tool.uv.index]]
-name = "pd-index-pip"
-url = "https://concavetrillion.github.io/pd-index-pip/simple/"
+name = "pdomain-index-pip"
+url = "https://pdomain.github.io/pdomain-index-pip/simple/"
 explicit = true
 
 [tool.uv.sources]
-pd-book-tools = { index = "pd-index-pip" }
+pdomain-book-tools = { path = "/workspaces/ocr-container/pd-book-tools/.claude/worktrees/rename-pdomain", editable = true }
 
 [dependency-groups]
 # The dev group installs the `train` extra so the full test suite (which
@@ -57,7 +57,7 @@ pd-book-tools = { index = "pd-index-pip" }
 # verified separately by tests/test_torch_free_import.py, which runs a
 # subprocess with torch hidden from sys.modules.
 dev = [
-    "pd-ocr-training[train]",
+    "pdomain-ocr-training[train]",
     "basedpyright>=1.39.4",
     "gitlint>=0.19.1",
     "pre-commit>=4.2.0",
@@ -153,7 +153,7 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.isort]
-known-first-party = ["pd_ocr_training"]
+known-first-party = ["pdomain_ocr_training"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests: assert is the idiom (S101); magic numbers common (PLR2004); no
@@ -175,26 +175,26 @@ known-first-party = ["pd_ocr_training"]
 "**/_*.py" = ["D"]
 # Legacy modules moved verbatim from pd-ocr-trainer — annotation/docstring debt tracked for a follow-up pass; do not rewrite as part of the move.
 # BLE/S also suppressed: broad-except and bandit patterns are pre-existing debt in the verbatim-moved code.
-"pd_ocr_training/utils.py" = ["ANN", "D", "BLE", "S"]
-"pd_ocr_training/datasets.py" = ["ANN", "D", "BLE", "S"]
+"pdomain_ocr_training/utils.py" = ["ANN", "D", "BLE", "S"]
+"pdomain_ocr_training/datasets.py" = ["ANN", "D", "BLE", "S"]
 # Extra families added during Task 4 verbatim-move: PLW2901 (loop-var overwrite
 # is idiomatic GPU tensor reassignment), RET506/RET504 (cosmetic return style),
 # PLW1508 (os.environ.get integer defaults), LOG015 (root logger calls),
 # PLW0603 (global statement for shared step counter). All pre-existing debt.
-"pd_ocr_training/detect.py" = ["ANN", "D", "BLE", "S", "PLW2901", "RET506", "PLW1508", "LOG015", "PLW0603", "RET504"]
-"pd_ocr_training/recog.py" = ["ANN", "D", "BLE", "S", "PLW2901", "RET506", "PLW1508", "LOG015", "PLW0603", "RET504"]
+"pdomain_ocr_training/detect.py" = ["ANN", "D", "BLE", "S", "PLW2901", "RET506", "PLW1508", "LOG015", "PLW0603", "RET504"]
+"pdomain_ocr_training/recog.py" = ["ANN", "D", "BLE", "S", "PLW2901", "RET506", "PLW1508", "LOG015", "PLW0603", "RET504"]
 
 [tool.basedpyright]
-include = ["pd_ocr_training", "tests"]
+include = ["pdomain_ocr_training", "tests"]
 exclude = [
     "**/__pycache__",
     "**/.venv",
     "**/node_modules",
     # Legacy verbatim-moved files — annotation/type debt tracked for a follow-up pass.
-    "pd_ocr_training/detect.py",
-    "pd_ocr_training/recog.py",
-    "pd_ocr_training/datasets.py",
-    "pd_ocr_training/utils.py",
+    "pdomain_ocr_training/detect.py",
+    "pdomain_ocr_training/recog.py",
+    "pdomain_ocr_training/datasets.py",
+    "pdomain_ocr_training/utils.py",
 ]
 
 # "recommended" is the workspace-canonical strict mode per 2026-05-17 decisions.

@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pd_ocr_training import local_eval
-from pd_ocr_training.local_eval import LocalEvalRunner
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training import local_eval
+from pdomain_ocr_training.local_eval import LocalEvalRunner
+from pdomain_ocr_training.protocols import (
     DetectionEvalConfig,
     DetectionEvalResult,
     RecognitionEvalConfig,
@@ -41,7 +41,7 @@ def test_recognition_from_config_delegates_to_backend(
             duration_seconds=1.0,
         )
 
-    monkeypatch.setattr("pd_ocr_training._eval_backend.evaluate_recognition_impl", fake_impl)
+    monkeypatch.setattr("pdomain_ocr_training._eval_backend.evaluate_recognition_impl", fake_impl)
 
     runner = LocalEvalRunner()
     cfg = RecognitionEvalConfig(val_path="/tmp/val", model_path="/tmp/m.pt")
@@ -73,7 +73,7 @@ def test_detection_from_config_delegates_to_backend(
             duration_seconds=2.0,
         )
 
-    monkeypatch.setattr("pd_ocr_training._eval_backend.evaluate_detection_impl", fake_impl)
+    monkeypatch.setattr("pdomain_ocr_training._eval_backend.evaluate_detection_impl", fake_impl)
 
     runner = LocalEvalRunner()
     cfg = DetectionEvalConfig(val_path="/tmp/val", model_path="/tmp/m.pt")

@@ -2,21 +2,21 @@
 
 > **Status**: Draft
 > **Last updated**: 2026-05-22
-> **Spec-Issue**: ConcaveTrillion/pd-ocr-training#5
+> **Spec-Issue**: pdomain/pdomain-ocr-training#5
 
 ## TL;DR
 
-Let `pd-ocr-training`'s recognition evaluation accept per-word glyph feature
+Let `pdomain-ocr-training`'s recognition evaluation accept per-word glyph feature
 data and emit per-feature accuracy slices (`ligature:<kind>`, `long_s`,
 `swash`) in `RecognitionEvalResult.slices`. The feature data crosses the repo
 boundary as a **plain serialized JSON sidecar** keyed by recognition crop id —
-`pd-ocr-training` never imports `pd-book-tools`. This unblocks
-`pd-ocr-trainer-spa` M13 (glyph-feature metric breakdown, trainer-spa spec
+`pdomain-ocr-training` never imports `pdomain-book-tools`. This unblocks
+`pdomain-ocr-trainer-spa` M13 (glyph-feature metric breakdown, trainer-spa spec
 07 §4).
 
 ## Context
 
-`pd-ocr-trainer-spa` M13 needs recognition eval metrics broken down by glyph
+`pdomain-ocr-trainer-spa` M13 needs recognition eval metrics broken down by glyph
 feature so a trainer can see whether the model regresses specifically on
 ligatures, long-s, or swash glyphs. The slicing rules are fixed by
 trainer-spa `specs/07-evaluation-and-metrics.md` §4:
@@ -44,14 +44,14 @@ The recognition eval surface today:
 - `_run_recognition_inference` (`_eval_backend.py:193`) — the inference worker;
   currently threads only flat prediction/ground-truth strings.
 
-The glyph data originates as `pd-book-tools` `GlyphAnnotations` (published in
-pd-book-tools v0.13.0, post-#163). `pd-ocr-training` is a lean training library
+The glyph data originates as `pdomain-book-tools` `GlyphAnnotations` (published in
+pdomain-book-tools v0.13.0, post-#163). `pdomain-ocr-training` is a lean training library
 with a torch-free protocol layer (`tests/test_torch_free_import.py` guards it).
 
 ## Constraints
 
-- **No `pd-book-tools` dependency edge.** `pd-ocr-training` must not import
-  `GlyphAnnotations` or add `pd-book-tools` to its dependency graph. The eval
+- **No `pdomain-book-tools` dependency edge.** `pdomain-ocr-training` must not import
+  `GlyphAnnotations` or add `pdomain-book-tools` to its dependency graph. The eval
   only needs feature-presence booleans, not the full annotation object.
 - **Protocol layer stays torch-free.** New models live in `protocols.py` and
   must import without torch — `test_torch_free_import.py` must still pass.
@@ -72,9 +72,9 @@ feature-presence data:
 
 ```python
 class GlyphFeatureSet(BaseModel):
-    """Per-word glyph feature presence, decoupled from pd-book-tools.
+    """Per-word glyph feature presence, decoupled from pdomain-book-tools.
 
-    The caller derives this from pd-book-tools GlyphAnnotations; pd-ocr-training
+    The caller derives this from pdomain-book-tools GlyphAnnotations; pdomain-ocr-training
     never imports GlyphAnnotations itself.
     """
     ligatures: list[str] = []   # ligature kinds present, e.g. ["fi", "long_st"]
@@ -172,11 +172,11 @@ The generic `feature: str` field already accommodates the parameterized
 - **Plain serialized sidecar vs. direct `GlyphAnnotations` import vs. mirrored
   schema.** Direct import adds a training-lib → foundation-lib dependency edge
   and pulls a heavy OCR/layout library into a training package, risking the
-  torch-free guarantee. A mirrored full schema duplicates a `pd-book-tools`
+  torch-free guarantee. A mirrored full schema duplicates a `pdomain-book-tools`
   type that can drift. The sidecar carries only the three feature-presence
-  facts the eval actually needs, keeps `pd-ocr-training`'s dependency graph
+  facts the eval actually needs, keeps `pdomain-ocr-training`'s dependency graph
   lean, and puts the `GlyphAnnotations` → `GlyphFeatureSet` extraction in the
-  caller (`pd-ocr-trainer-spa`), which already depends on `pd-book-tools`.
+  caller (`pdomain-ocr-trainer-spa`), which already depends on `pdomain-book-tools`.
 - **Crop-id keying vs. parallel-index list.** A parallel list aligned to val
   iteration order is simpler but silently misaligns every downstream slice if
   any sample is filtered or reordered. The DocTR recognition val set already
@@ -192,11 +192,11 @@ The generic `feature: str` field already accommodates the parameterized
 
 ## Consequences
 
-- `pd-ocr-trainer-spa` M13 becomes implementable: it maps
+- `pdomain-ocr-trainer-spa` M13 becomes implementable: it maps
   `EvalRequest.slice_glyph_features` onto `RecognitionEvalConfig`, derives the
-  sidecar from `pd-book-tools` `GlyphAnnotations`, and renders
+  sidecar from `pdomain-book-tools` `GlyphAnnotations`, and renders
   `RecognitionEvalResult.slices` in `EvalMetricsTable`.
-- `pd-ocr-training` gains no new runtime dependency; the protocol layer stays
+- `pdomain-ocr-training` gains no new runtime dependency; the protocol layer stays
   torch-free.
 - The sidecar JSON format becomes a contract between the dataset/export side
   and the eval side — it must be documented where the recognition val-set
@@ -206,7 +206,7 @@ The generic `feature: str` field already accommodates the parameterized
 ## Open questions
 
 - Which component writes the sidecar — `ExportManager` at dataset-export time,
-  or `pd-ocr-trainer-spa` just before invoking eval? This is a build-time
+  or `pdomain-ocr-trainer-spa` just before invoking eval? This is a build-time
   decomposition decision and does not change this spec's contract; the eval
   side only consumes the sidecar.
 - Exact crop-id string form (bare filename vs. path relative to `val_path`).
@@ -216,12 +216,12 @@ The generic `feature: str` field already accommodates the parameterized
 
 ## References
 
-- Spec issue: ConcaveTrillion/pd-ocr-training#5
-- Parent feature: ConcaveTrillion/pd-ocr-training#4
-- Slicing rules: `pd-ocr-trainer-spa` `specs/07-evaluation-and-metrics.md` §4
-- Eval surface: `pd_ocr_training/protocols.py`
+- Spec issue: pdomain/pdomain-ocr-training#5
+- Parent feature: pdomain/pdomain-ocr-training#4
+- Slicing rules: `pdomain-ocr-trainer-spa` `specs/07-evaluation-and-metrics.md` §4
+- Eval surface: `pdomain_ocr_training/protocols.py`
   (`RecognitionEvalConfig`, `EvalSlice`, `RecognitionEvalResult`, `IEvalRunner`)
-- Inference worker: `pd_ocr_training/_eval_backend.py`
+- Inference worker: `pdomain_ocr_training/_eval_backend.py`
   (`_run_recognition_inference`)
 - IEvalRunner ADR: `docs/decisions/2026-05-21-ieval-runner-protocol.md`
-- pd-book-tools v0.13.0 — publishes the `GlyphAnnotations` glyph module (#163)
+- pdomain-book-tools v0.13.0 — publishes the `GlyphAnnotations` glyph module (#163)

@@ -1,9 +1,9 @@
-"""Tests for pd_ocr_training.local — LocalTrainingRunner.
+"""Tests for pdomain_ocr_training.local — LocalTrainingRunner.
 
 All tests monkeypatch the real training functions so no GPU is required.
 Monkeypatch targets:
-  - ``pd_ocr_training.local.detect_from_config``  (imported into local.py)
-  - ``pd_ocr_training.local.train_from_config``   (imported into local.py)
+  - ``pdomain_ocr_training.local.detect_from_config``  (imported into local.py)
+  - ``pdomain_ocr_training.local.train_from_config``   (imported into local.py)
 """
 
 import threading
@@ -13,8 +13,8 @@ from typing import Any
 
 import pytest
 
-from pd_ocr_training.local import LocalTrainingRunner
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training.local import LocalTrainingRunner
+from pdomain_ocr_training.protocols import (
     DetectionConfig,
     ITrainingRunner,
     RecognitionConfig,
@@ -87,7 +87,7 @@ def test_local_runner_satisfies_protocol() -> None:
 
 def test_train_detection_yields_done_event(monkeypatch: pytest.MonkeyPatch) -> None:
     """train_detection yields at least one event with kind='done'."""
-    monkeypatch.setattr("pd_ocr_training.local.detect_from_config", _make_noop_detect())
+    monkeypatch.setattr("pdomain_ocr_training.local.detect_from_config", _make_noop_detect())
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
 
     events = list(LocalTrainingRunner().train_detection("demo", cfg))
@@ -98,7 +98,7 @@ def test_train_detection_yields_done_event(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_train_detection_final_event_is_done(monkeypatch: pytest.MonkeyPatch) -> None:
     """The last event yielded by train_detection has kind='done' on success."""
-    monkeypatch.setattr("pd_ocr_training.local.detect_from_config", _make_noop_detect())
+    monkeypatch.setattr("pdomain_ocr_training.local.detect_from_config", _make_noop_detect())
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
 
     events = list(LocalTrainingRunner().train_detection("run-001", cfg))
@@ -113,7 +113,7 @@ def test_train_detection_final_event_is_done(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_train_recognition_yields_done_event(monkeypatch: pytest.MonkeyPatch) -> None:
     """train_recognition yields at least one event with kind='done'."""
-    monkeypatch.setattr("pd_ocr_training.local.train_from_config", _make_noop_recog())
+    monkeypatch.setattr("pdomain_ocr_training.local.train_from_config", _make_noop_recog())
     cfg = RecognitionConfig(train_path="/tmp/train", val_path="/tmp/val")
 
     events = list(LocalTrainingRunner().train_recognition("demo", cfg))
@@ -124,7 +124,7 @@ def test_train_recognition_yields_done_event(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_train_recognition_final_event_is_done(monkeypatch: pytest.MonkeyPatch) -> None:
     """The last event yielded by train_recognition has kind='done' on success."""
-    monkeypatch.setattr("pd_ocr_training.local.train_from_config", _make_noop_recog())
+    monkeypatch.setattr("pdomain_ocr_training.local.train_from_config", _make_noop_recog())
     cfg = RecognitionConfig(train_path="/tmp/train", val_path="/tmp/val")
 
     events = list(LocalTrainingRunner().train_recognition("run-001", cfg))
@@ -140,7 +140,7 @@ def test_train_recognition_final_event_is_done(monkeypatch: pytest.MonkeyPatch) 
 def test_train_detection_forwards_log_event(monkeypatch: pytest.MonkeyPatch) -> None:
     """'log' events from the hook are forwarded as kind='log' TrainingEvents."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_noop_detect(emit_events=[{"event": "log", "message": "starting up"}]),
     )
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
@@ -154,7 +154,7 @@ def test_train_detection_forwards_log_event(monkeypatch: pytest.MonkeyPatch) -> 
 def test_train_detection_forwards_train_batch_as_metric(monkeypatch: pytest.MonkeyPatch) -> None:
     """'train_batch' hook events are forwarded as kind='metric' TrainingEvents."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_noop_detect(
             emit_events=[
                 {"event": "train_batch", "loss": 0.5, "lr": 0.001, "batch": 1, "total_batches": 10},
@@ -173,7 +173,7 @@ def test_train_detection_forwards_train_batch_as_metric(monkeypatch: pytest.Monk
 def test_train_detection_forwards_val_batch_as_metric(monkeypatch: pytest.MonkeyPatch) -> None:
     """'val_batch' hook events are forwarded as kind='metric' TrainingEvents."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_noop_detect(
             emit_events=[
                 {"event": "val_batch", "loss": 0.3, "batch": 1, "total_batches": 5},
@@ -191,7 +191,7 @@ def test_train_detection_forwards_val_batch_as_metric(monkeypatch: pytest.Monkey
 def test_train_detection_forwards_epoch_end_as_epoch(monkeypatch: pytest.MonkeyPatch) -> None:
     """'epoch_end' hook events are forwarded as kind='epoch' TrainingEvents."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_noop_detect(
             emit_events=[
                 {
@@ -218,7 +218,7 @@ def test_train_detection_forwards_epoch_end_as_epoch(monkeypatch: pytest.MonkeyP
 def test_train_recognition_forwards_epoch_end_as_epoch(monkeypatch: pytest.MonkeyPatch) -> None:
     """'epoch_end' hook events for recognition are forwarded as kind='epoch'."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.train_from_config",
+        "pdomain_ocr_training.local.train_from_config",
         _make_noop_recog(
             emit_events=[
                 {
@@ -248,7 +248,7 @@ def test_train_recognition_forwards_epoch_end_as_epoch(monkeypatch: pytest.Monke
 def test_train_detection_exception_yields_error_event(monkeypatch: pytest.MonkeyPatch) -> None:
     """An exception inside the training function is surfaced as kind='error'."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_raising_detect(RuntimeError("GPU exploded")),
     )
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
@@ -264,7 +264,7 @@ def test_train_detection_exception_yields_error_event(monkeypatch: pytest.Monkey
 def test_train_recognition_exception_yields_error_event(monkeypatch: pytest.MonkeyPatch) -> None:
     """An exception inside the recognition training function yields kind='error'."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.train_from_config",
+        "pdomain_ocr_training.local.train_from_config",
         _make_raising_recog(ValueError("bad vocab")),
     )
     cfg = RecognitionConfig(train_path="/tmp/train", val_path="/tmp/val")
@@ -279,7 +279,7 @@ def test_train_recognition_exception_yields_error_event(monkeypatch: pytest.Monk
 def test_train_detection_no_done_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """When the worker raises, the final event is 'error', not 'done'."""
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_raising_detect(RuntimeError("oops")),
     )
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
@@ -326,7 +326,7 @@ def test_two_runners_are_independent(monkeypatch: pytest.MonkeyPatch) -> None:
         },
     ]
     monkeypatch.setattr(
-        "pd_ocr_training.local.detect_from_config",
+        "pdomain_ocr_training.local.detect_from_config",
         _make_noop_detect(emit_events=shared_events),
     )
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
@@ -424,7 +424,7 @@ def test_detection_events_arrive_in_order_under_concurrency(
             }
         )
 
-    monkeypatch.setattr("pd_ocr_training.local.detect_from_config", slow_detect)
+    monkeypatch.setattr("pdomain_ocr_training.local.detect_from_config", slow_detect)
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
 
     gen = LocalTrainingRunner().train_detection("concurrency-test", cfg)
@@ -481,7 +481,7 @@ def test_train_detection_with_delay_still_yields_done(monkeypatch: pytest.Monkey
         if progress_hook is not None:
             progress_hook({"event": "log", "message": "done sleeping"})
 
-    monkeypatch.setattr("pd_ocr_training.local.detect_from_config", slow_detect)
+    monkeypatch.setattr("pdomain_ocr_training.local.detect_from_config", slow_detect)
     cfg = DetectionConfig(train_path="/tmp/train", val_path="/tmp/val")
 
     events = list(LocalTrainingRunner().train_detection("slow-test", cfg))

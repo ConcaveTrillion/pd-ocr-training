@@ -61,13 +61,13 @@ import traceback
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Protocol, TypedDict
 
-from pd_ocr_training.detect import detect_from_config
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training.detect import detect_from_config
+from pdomain_ocr_training.protocols import (
     DetectionConfig,
     RecognitionConfig,
     TrainingEvent,
 )
-from pd_ocr_training.recog import train_from_config
+from pdomain_ocr_training.recog import train_from_config
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

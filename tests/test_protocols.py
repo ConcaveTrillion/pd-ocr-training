@@ -1,8 +1,8 @@
-"""Tests for pd_ocr_training.protocols — ITrainingRunner structural protocol."""
+"""Tests for pdomain_ocr_training.protocols — ITrainingRunner structural protocol."""
 
 from collections.abc import Iterator
 
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training.protocols import (
     DetectionConfig,
     ITrainingRunner,
     RecognitionConfig,

@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from pd_ocr_training import _eval_backend
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training import _eval_backend
+from pdomain_ocr_training.protocols import (
     EvalSlice,
     GlyphFeatureSet,
     RecognitionEvalConfig,

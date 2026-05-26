@@ -1,4 +1,4 @@
-# pd-ocr-training conventions
+# pdomain-ocr-training conventions
 
 <!-- workspace-conventions:start -->
 
@@ -160,8 +160,8 @@ that case, follow "Document every lint-rule suppression" above.
 **Why.** Three concrete patterns recur and each is fixable, not
 ignorable:
 
-1. `reportMissingTypeStubs` on a `pd_*` sibling import — pd-book-tools
-   v0.14.0+ and pd-ocr-ops v0.2.0+ ship `py.typed`. Bump the wheel pin in
+1. `reportMissingTypeStubs` on a `pd_*` sibling import — pdomain-book-tools
+   v0.14.0+ and pdomain-ocr-ops v0.2.0+ ship `py.typed`. Bump the wheel pin in
    `pyproject.toml` instead of adding an ignore. Note: `py.typed` only
    guarantees a top-level marker; attribute-level typing may still surface
    as `Any` in some access patterns (especially `getattr()` chains —
@@ -184,8 +184,8 @@ the line basedpyright reports.
 
 **Common high-confidence violations** (bot auto-fix candidates)
 
-- `# pyright: ignore[reportMissingTypeStubs]` on a `pd_book_tools` or
-  `pd_ocr_ops` import — the wheel ships `py.typed`; bump the pin and
+- `# pyright: ignore[reportMissingTypeStubs]` on a `pdomain_book_tools` or
+  `pdomain_ocr_ops` import — the wheel ships `py.typed`; bump the pin and
   delete the ignore.
 - `cast(X, y)` or `X(y)` (e.g. `str(y)`) immediately followed by code that
   treats `y` as already type `X` because the source is annotated `X` —

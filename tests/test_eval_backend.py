@@ -1,4 +1,4 @@
-"""Tests for pd_ocr_training._eval_backend — real DocTR eval backend.
+"""Tests for pdomain_ocr_training._eval_backend — real DocTR eval backend.
 
 The pure metric helpers (``_levenshtein``, ``_cer``, ``_wer``, ``_f1``) are
 fully GPU-free and unit-tested directly.  The ``evaluate_*_impl`` entry points
@@ -12,8 +12,8 @@ from typing import Any
 
 import pytest
 
-from pd_ocr_training import _eval_backend
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training import _eval_backend
+from pdomain_ocr_training.protocols import (
     DetectionEvalConfig,
     DetectionEvalResult,
     RecognitionEvalConfig,

@@ -33,7 +33,7 @@
 
 ### Fixed in 0.2.0
 
-- CI: resolve `pd-book-tools` from `pd-index-pip` (not editable path).
+- CI: resolve `pdomain-book-tools` from `pdomain-index-pip` (not editable path).
 - CI: basedpyright `failOnWarnings` replaced with baseline file approach
   (grandfathers 118 pre-existing warnings via `.basedpyright/baseline.json`).
 - 4 basedpyright type errors in test files (`test_local_runner.py` lines 445

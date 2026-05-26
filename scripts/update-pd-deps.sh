@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/update-pd-deps.sh — bump all sibling pd-* deps to registry latest.
 #
-# Queries pd-index-pip (Python) and pd-index-npm (npm) for each sibling,
+# Queries pdomain-index-pip (Python) and pdomain-index-npm (npm) for each sibling,
 # updates minimum-version pins in pyproject.toml and frontend/package.json,
 # then leaves the diff staged for human review. Does NOT commit.
 #
@@ -12,10 +12,10 @@
 set -euo pipefail
 
 # ─── Repo-specific config (edit per-repo during M3–M9 rollout) ───────────────
-PY_SIBLINGS=(pd-book-tools)
-NPM_SIBLINGS=()   # no npm siblings for pd-ocr-training
-PD_INDEX_PIP="https://concavetrillion.github.io/pd-index-pip"
-PD_INDEX_NPM="https://concavetrillion.github.io/pd-index-npm"
+PY_SIBLINGS=(pdomain-book-tools)
+NPM_SIBLINGS=()   # no npm siblings for pdomain-ocr-training
+PD_INDEX_PIP="https://pdomain.github.io/pdomain-index-pip"
+PD_INDEX_NPM="https://pdomain.github.io/pdomain-index-npm"
 # ─────────────────────────────────────────────────────────────────────────────
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,7 +38,7 @@ if [[ "$LOCAL_DEV_ACTIVE" == "true" ]]; then
   (cd "$CANONICAL_REPO_ROOT" && uv sync --group dev)
 fi
 
-# ─── Step 3: Query pd-index-pip for each Python sibling ──────────────────────
+# ─── Step 3: Query pdomain-index-pip for each Python sibling ──────────────────────
 # Track if any Python dep changed (to avoid redundant uv lock+sync).
 PY_CHANGED=false
 
@@ -49,7 +49,7 @@ for sibling in "${PY_SIBLINGS[@]}"; do
   # Fetch the PEP 503 simple index page; fail loudly if unreachable/404.
   html=$(curl -sSf "$index_url" 2>&1) || {
     echo "ERROR: could not fetch $index_url" >&2
-    echo "       Network issue or sibling not yet seeded in pd-index-pip." >&2
+    echo "       Network issue or sibling not yet seeded in pdomain-index-pip." >&2
     echo "       No changes made." >&2
     exit 1
   }
@@ -81,14 +81,14 @@ if vers:
   )
 
   if [[ -z "$latest" ]]; then
-    echo "ERROR: pd-index-pip returned a page for $sibling but no wheel/sdist found." >&2
+    echo "ERROR: pdomain-index-pip returned a page for $sibling but no wheel/sdist found." >&2
     echo "       Index may not be seeded yet. No changes made." >&2
     exit 1
   fi
 
   say "   latest $sibling = $latest"
 
-  # Read current pinned minimum from pyproject.toml, e.g. "pd-book-tools>=0.14.1"
+  # Read current pinned minimum from pyproject.toml, e.g. "pdomain-book-tools>=0.14.1"
   current=$(grep -oP "\"$sibling>=[0-9]+\.[0-9]+[^\"]*\"" "$CANONICAL_REPO_ROOT/pyproject.toml" \
     | grep -oP ">=[0-9]+\.[0-9]+[^\"]+" \
     | sed 's/>=//' \
@@ -114,20 +114,20 @@ if [[ "$PY_CHANGED" == "true" ]]; then
   (cd "$CANONICAL_REPO_ROOT" && uv sync --group dev)
 fi
 
-# ─── Step 4: Query pd-index-npm for each npm sibling ─────────────────────────
+# ─── Step 4: Query pdomain-index-npm for each npm sibling ─────────────────────────
 FRONTEND_DIR="$REPO_ROOT/frontend"
 NPM_CHANGED=false
 
 if [[ -d "$FRONTEND_DIR" ]]; then
   for sibling in "${NPM_SIBLINGS[@]}"; do
-    pkg="@concavetrillion/$sibling"
-    index_url="$PD_INDEX_NPM/@concavetrillion/$sibling/"
+    pkg="@pdomain/$sibling"
+    index_url="$PD_INDEX_NPM/@pdomain/$sibling/"
     say "→ querying $index_url"
 
     # Fetch npm-style package metadata JSON; fail loudly if unreachable/404.
     meta=$(curl -sSf "$index_url" 2>&1) || {
       echo "ERROR: could not fetch $index_url" >&2
-      echo "       Network issue or sibling not yet seeded in pd-index-npm." >&2
+      echo "       Network issue or sibling not yet seeded in pdomain-index-npm." >&2
       echo "       No changes made." >&2
       exit 1
     }
