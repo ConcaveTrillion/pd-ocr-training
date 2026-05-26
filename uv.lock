@@ -1341,7 +1341,7 @@ wheels = [
 
 [[package]]
 name = "pdomain-book-tools"
-source = { editable = "/workspaces/ocr-container/pd-book-tools/.claude/worktrees/rename-pdomain" }
+source = { editable = "../pd-book-tools" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "ipython" },
@@ -1440,7 +1440,7 @@ dev = [
 requires-dist = [
     { name = "matplotlib", marker = "extra == 'train'" },
     { name = "numpy", marker = "extra == 'train'" },
-    { name = "pdomain-book-tools", editable = "/workspaces/ocr-container/pd-book-tools/.claude/worktrees/rename-pdomain" },
+    { name = "pdomain-book-tools", editable = "../pd-book-tools" },
     { name = "pydantic", specifier = ">=2.5" },
     { name = "python-doctr", marker = "extra == 'train'" },
     { name = "tomli", specifier = ">=2.0" },
