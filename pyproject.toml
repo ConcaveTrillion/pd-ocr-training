@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "pdomain-ocr-training"
-version = "0.2.3"
+dynamic = ["version"]
 description = "DocTR OCR model training pipeline for the pd-* OCR suite"
 authors = [{ name = "CT", email = "concavetrillion@gmail.com" }]
 readme = "README.md"
@@ -38,6 +38,9 @@ pdomain-ocr-training-recog = "pdomain_ocr_training.recog:main"
 [project.urls]
 Homepage = "https://github.com/pdomain/pdomain-ocr-training"
 Source = "https://github.com/pdomain/pdomain-ocr-training"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["pdomain_ocr_training"]
