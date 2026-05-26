@@ -20,7 +20,7 @@ Eval entry points
 -----------------
 The module-level eval entry points (``evaluate_detection_from_config`` /
 ``evaluate_recognition_from_config``) delegate to the real DocTR backend in
-``pd_ocr_training._eval_backend``.  That backend module is imported *lazily*
+``pdomain_ocr_training._eval_backend``.  That backend module is imported *lazily*
 inside each function -- never at module scope -- so that:
 
 1. The package can be imported and the Protocol contract validated in a
@@ -40,7 +40,7 @@ from typing import TYPE_CHECKING, TypedDict
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from pd_ocr_training.protocols import (
+    from pdomain_ocr_training.protocols import (
         DetectionEvalConfig,
         DetectionEvalResult,
         RecognitionEvalConfig,
@@ -95,7 +95,7 @@ def evaluate_detection_from_config(
     """Run a detection evaluation pass via the real DocTR backend.
 
     Reconstructs a :class:`DetectionEvalConfig` from the flattened kwargs and
-    delegates to :func:`pd_ocr_training._eval_backend.evaluate_detection_impl`.
+    delegates to :func:`pdomain_ocr_training._eval_backend.evaluate_detection_impl`.
     The ``_eval_backend`` module is imported lazily so importing ``local_eval``
     stays torch-free.
 
@@ -117,8 +117,8 @@ def evaluate_detection_from_config(
     Raises:
         ImportError: When the ``[train]`` extra (torch / DocTR) is not installed.
     """
-    from pd_ocr_training import _eval_backend
-    from pd_ocr_training.protocols import DetectionEvalConfig
+    from pdomain_ocr_training import _eval_backend
+    from pdomain_ocr_training.protocols import DetectionEvalConfig
 
     config = DetectionEvalConfig.model_validate(
         {
@@ -152,7 +152,7 @@ def evaluate_recognition_from_config(
     """Run a recognition evaluation pass via the real DocTR backend.
 
     Reconstructs a :class:`RecognitionEvalConfig` from the flattened kwargs and
-    delegates to :func:`pd_ocr_training._eval_backend.evaluate_recognition_impl`.
+    delegates to :func:`pdomain_ocr_training._eval_backend.evaluate_recognition_impl`.
     The ``_eval_backend`` module is imported lazily so importing ``local_eval``
     stays torch-free.
 
@@ -174,8 +174,8 @@ def evaluate_recognition_from_config(
     Raises:
         ImportError: When the ``[train]`` extra (torch / DocTR) is not installed.
     """
-    from pd_ocr_training import _eval_backend
-    from pd_ocr_training.protocols import RecognitionEvalConfig
+    from pdomain_ocr_training import _eval_backend
+    from pdomain_ocr_training.protocols import RecognitionEvalConfig
 
     config = RecognitionEvalConfig.model_validate(
         {

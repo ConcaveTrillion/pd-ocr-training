@@ -53,14 +53,14 @@ repos:
 
     -   id: basedpyright
         name: basedpyright type check (recommended mode; workspace canonical)
-        entry: uv run basedpyright pd_ocr_training --level error
+        entry: uv run basedpyright pdomain_ocr_training --level error
         language: system
         stages: [pre-commit]
         pass_filenames: false
         # Legacy verbatim-moved files (detect/recog/datasets/utils) are excluded
         # in pyproject.toml [tool.basedpyright] exclude list — only strict-lint
         # new code (protocols.py, local.py, __init__.py) is type-checked.
-        files: ^pd_ocr_training/.*\.py$
+        files: ^pdomain_ocr_training/.*\.py$
 -   repo: https://github.com/jorisroovers/gitlint
     rev: v0.19.1
     hooks:

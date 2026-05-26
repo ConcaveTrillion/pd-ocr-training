@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   ci:
-    name: pd-ocr-training CI
+    name: pdomain-ocr-training CI
     runs-on: ubuntu-latest
     strategy:
       matrix:

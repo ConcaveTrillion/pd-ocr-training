@@ -1,4 +1,4 @@
-# CLAUDE — pd-ocr-training
+# CLAUDE — pdomain-ocr-training
 
 DocTR OCR model training pipeline (detection + recognition) for the `pd-*`
 suite. Extracted from the legacy `pd-ocr-trainer` repo.
@@ -6,19 +6,19 @@ suite. Extracted from the legacy `pd-ocr-trainer` repo.
 ## Why a separate package
 
 `torch` and `DocTR` are heavy ML dependencies. Isolating them here keeps every
-other `pd-*` SPA backend torch-free. Only the future `pd-ocr-trainer-spa`
+other `pd-*` SPA backend torch-free. Only the future `pdomain-ocr-trainer-spa`
 depends on this package.
 
 ## Install modes — torch is an optional extra
 
 `torch` / `python-doctr` / `matplotlib` are **not** in `[project.dependencies]`.
-They live in the `train` optional extra. This lets `pd-ocr-trainer-spa`'s
+They live in the `train` optional extra. This lets `pdomain-ocr-trainer-spa`'s
 long-lived web process import the torch-free half (config models + Protocol)
 without dragging multi-GB torch into the web process.
 
 ```bash
-pip install pd-ocr-training            # base — torch-free
-pip install 'pd-ocr-training[train]'   # full training stack
+pip install pdomain-ocr-training            # base — torch-free
+pip install 'pdomain-ocr-training[train]'   # full training stack
 ```
 
 The base install exposes `DetectionConfig`, `RecognitionConfig`,
@@ -26,7 +26,7 @@ The base install exposes `DetectionConfig`, `RecognitionConfig`,
 (`DetectionEvalConfig`, `RecognitionEvalConfig`), result models (`EvalSlice`,
 `DetectionEvalResult`, `RecognitionEvalResult`), and `LocalEvalRunner`.
 `LocalTrainingRunner` is exported lazily via `__init__.__getattr__` — `import
-pd_ocr_training` never imports torch. Accessing `LocalTrainingRunner` without
+pdomain_ocr_training` never imports torch. Accessing `LocalTrainingRunner` without
 the `[train]` extra raises a helpful `ImportError`. `LocalEvalRunner` is
 torch-free (its stub impl raises `NotImplementedError`) and importable without
 the extra. The `dev` dependency-group pulls in `[train]` so `make ci` exercises
@@ -36,7 +36,7 @@ the full stack; the torch-free contract is covered separately by
 ## Package layout
 
 ```text
-pd_ocr_training/
+pdomain_ocr_training/
     __init__.py      # Public API re-exports
     protocols.py     # ITrainingRunner + IEvalRunner Protocols; all config + result models
     local.py         # LocalTrainingRunner — callback→iterator bridge (strict-lint-compliant)
@@ -57,7 +57,7 @@ the legacy repo. They carry `ANN`, `D`, `BLE`, and `S` per-file-ignores in
 Consumers depend on the `ITrainingRunner` Protocol, not the concrete modules:
 
 ```python
-from pd_ocr_training import ITrainingRunner, LocalTrainingRunner, DetectionConfig
+from pdomain_ocr_training import ITrainingRunner, LocalTrainingRunner, DetectionConfig
 
 runner: ITrainingRunner = LocalTrainingRunner()
 cfg = DetectionConfig(train_path="data/train", val_path="data/val")
@@ -71,8 +71,8 @@ for event in runner.train_detection("my-run", cfg):
 make setup          # uv sync --group dev + install pre-commit hooks
 make lint           # ruff check --fix
 make lint-check     # ruff format --check + ruff check (CI-exact, no fix)
-make format         # ruff format pd_ocr_training tests
-make typecheck      # basedpyright pd_ocr_training --level error
+make format         # ruff format pdomain_ocr_training tests
+make typecheck      # basedpyright pdomain_ocr_training --level error
 make test           # uv run pytest -n auto
 make ci             # setup → pre-commit → lint-check → typecheck → test
 make build          # uv build
@@ -80,7 +80,7 @@ make clean          # rm dist .venv .pytest_cache .ruff_cache .ci-ai.log htmlcov
 
 # local-dev workflow (spec #362) — see ../docs/process/local-dev.md
 make local-setup        # clone any missing sibling pd-* repos
-make local-dev          # switch to local-dev mode (editable ../pd-book-tools + marker)
+make local-dev          # switch to local-dev mode (editable ../pdomain-book-tools + marker)
 make local-check        # print local-dev mode + per-sibling resolution
 make local-upgrade-deps # upgrade deps then restore editables (local-mode only)
 
@@ -93,7 +93,7 @@ Run any command with `uv run` directly if preferred:
 ```bash
 uv run pytest tests/ -v
 uv run ruff check .
-uv run basedpyright pd_ocr_training --level error
+uv run basedpyright pdomain_ocr_training --level error
 ```
 
 ## docs/ folder

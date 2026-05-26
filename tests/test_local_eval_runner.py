@@ -1,9 +1,9 @@
-"""Tests for pd_ocr_training.local_eval — LocalEvalRunner.
+"""Tests for pdomain_ocr_training.local_eval — LocalEvalRunner.
 
 All tests monkeypatch the underlying eval functions so no GPU is required.
 Monkeypatch targets:
-  - ``pd_ocr_training.local_eval.evaluate_detection_from_config``
-  - ``pd_ocr_training.local_eval.evaluate_recognition_from_config``
+  - ``pdomain_ocr_training.local_eval.evaluate_detection_from_config``
+  - ``pdomain_ocr_training.local_eval.evaluate_recognition_from_config``
 """
 
 import time
@@ -12,8 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
-from pd_ocr_training.local_eval import LocalEvalRunner
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training.local_eval import LocalEvalRunner
+from pdomain_ocr_training.protocols import (
     DetectionEvalConfig,
     DetectionEvalResult,
     EvalSlice,
@@ -72,7 +72,7 @@ def test_evaluate_recognition_returns_result() -> None:
     expected = _make_recog_result()
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_recognition_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_recognition_from_config",
         return_value=expected,
     ):
         runner = LocalEvalRunner()
@@ -90,7 +90,7 @@ def test_evaluate_recognition_with_slices() -> None:
     expected = _make_recog_result(slices=slices)
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_recognition_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_recognition_from_config",
         return_value=expected,
     ):
         runner = LocalEvalRunner()
@@ -110,7 +110,7 @@ def test_evaluate_recognition_passes_config_fields() -> None:
         return _make_recog_result()
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_recognition_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_recognition_from_config",
         side_effect=fake_eval,
     ):
         runner = LocalEvalRunner()
@@ -132,7 +132,7 @@ def test_evaluate_recognition_passes_config_fields() -> None:
 def test_evaluate_recognition_raises_on_error() -> None:
     """evaluate_recognition propagates exceptions from the underlying function."""
     with patch(
-        "pd_ocr_training.local_eval.evaluate_recognition_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_recognition_from_config",
         side_effect=RuntimeError("model not found"),
     ):
         runner = LocalEvalRunner()
@@ -151,7 +151,7 @@ def test_evaluate_detection_returns_result() -> None:
     expected = _make_det_result()
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_detection_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_detection_from_config",
         return_value=expected,
     ):
         runner = LocalEvalRunner()
@@ -169,7 +169,7 @@ def test_evaluate_detection_with_slices() -> None:
     expected = _make_det_result(slices=slices)
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_detection_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_detection_from_config",
         return_value=expected,
     ):
         runner = LocalEvalRunner()
@@ -189,7 +189,7 @@ def test_evaluate_detection_passes_config_fields() -> None:
         return _make_det_result()
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_detection_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_detection_from_config",
         side_effect=fake_eval,
     ):
         runner = LocalEvalRunner()
@@ -210,7 +210,7 @@ def test_evaluate_detection_passes_config_fields() -> None:
 def test_evaluate_detection_raises_on_error() -> None:
     """evaluate_detection propagates exceptions from the underlying function."""
     with patch(
-        "pd_ocr_training.local_eval.evaluate_detection_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_detection_from_config",
         side_effect=ValueError("bad checkpoint"),
     ):
         runner = LocalEvalRunner()
@@ -232,7 +232,7 @@ def test_evaluate_recognition_duration_is_positive() -> None:
         return _make_recog_result(duration_seconds=0.01)
 
     with patch(
-        "pd_ocr_training.local_eval.evaluate_recognition_from_config",
+        "pdomain_ocr_training.local_eval.evaluate_recognition_from_config",
         side_effect=fake_eval,
     ):
         runner = LocalEvalRunner()
@@ -248,8 +248,8 @@ def test_evaluate_recognition_duration_is_positive() -> None:
 
 
 def test_local_eval_runner_class_importable() -> None:
-    """LocalEvalRunner is importable from pd_ocr_training (lazy export)."""
-    import pd_ocr_training
+    """LocalEvalRunner is importable from pdomain_ocr_training (lazy export)."""
+    import pdomain_ocr_training
 
-    runner_cls = pd_ocr_training.LocalEvalRunner
+    runner_cls = pdomain_ocr_training.LocalEvalRunner
     assert runner_cls is LocalEvalRunner

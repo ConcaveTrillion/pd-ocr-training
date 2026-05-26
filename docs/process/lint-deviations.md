@@ -1,4 +1,4 @@
-# Lint-rule Deviations — pd-ocr-training
+# Lint-rule Deviations — pdomain-ocr-training
 
 Standing suppressions and per-file rule overrides in this repo.
 Each entry records: the rule, the tool, the file(s) affected, and
@@ -206,7 +206,7 @@ docstrings.
 
 ### 18. Legacy verbatim-moved modules — broad annotation/docstring/safety debt
 
-**Files:** `pd_ocr_training/utils.py`, `pd_ocr_training/datasets.py`
+**Files:** `pdomain_ocr_training/utils.py`, `pdomain_ocr_training/datasets.py`
 
 **Rules suppressed:** `ANN`, `D`, `BLE`, `S`.
 
@@ -220,7 +220,7 @@ commit would conflate migration with refactoring.
 
 ### 19. Legacy verbatim-moved modules — extended families for detect/recog
 
-**Files:** `pd_ocr_training/detect.py`, `pd_ocr_training/recog.py`
+**Files:** `pdomain_ocr_training/detect.py`, `pdomain_ocr_training/recog.py`
 
 **Rules suppressed:** `ANN`, `D`, `BLE`, `S`, `PLW2901`, `RET506`,
 `PLW1508`, `LOG015`, `PLW0603`, `RET504`.
@@ -245,7 +245,7 @@ reason (see `[tool.basedpyright] exclude` in `pyproject.toml`).
 
 ## Python — ruff (inline noqa)
 
-### 20. `BLE001` — `pd_ocr_training/local.py:158`
+### 20. `BLE001` — `pdomain_ocr_training/local.py:158`
 
 **Suppression:** `# noqa: BLE001 — must capture *all* exceptions from worker thread`
 
@@ -268,7 +268,7 @@ subprocess. There is no user-supplied shell input; `S603` fires on
 
 ---
 
-### 22. `TC003` — `pd_ocr_training/protocols.py:56`
+### 22. `TC003` — `pdomain_ocr_training/protocols.py:56`
 
 **Suppression:** `# noqa: TC003 — keep Path importable at runtime; pydantic resolves the annotation at model-build time`
 
@@ -279,7 +279,7 @@ cause a `NameError` at model instantiation.
 
 ---
 
-### 23. `N817` — `pd_ocr_training/recog.py:15`, `pd_ocr_training/detect.py:15`
+### 23. `N817` — `pdomain_ocr_training/recog.py:15`, `pdomain_ocr_training/detect.py:15`
 
 **Suppression:** `# noqa: N817 — PyTorch standard alias`
 
@@ -290,7 +290,7 @@ renaming it would diverge from DocTR conventions.
 
 ---
 
-### 24. `N812` — `pd_ocr_training/recog.py:33`, `pd_ocr_training/detect.py:31`
+### 24. `N812` — `pdomain_ocr_training/recog.py:33`, `pdomain_ocr_training/detect.py:31`
 
 **Suppression:** `# noqa: N812 — doctr library conventional alias`
 
@@ -338,7 +338,7 @@ false-positive narrowing gap.
 
 ## Python — basedpyright (source: DocTR stub gaps)
 
-### 27. `reportArgumentType` — `pd_ocr_training/_eval_backend.py`
+### 27. `reportArgumentType` — `pdomain_ocr_training/_eval_backend.py`
 
 **Suppression:** `# pyright: ignore[reportArgumentType]` on the `val_set`
 argument to `DataLoader(...)` and on the `SequentialSampler(val_set)` argument,

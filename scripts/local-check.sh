@@ -4,7 +4,7 @@
 # Exit 0 always (informational).
 set -euo pipefail
 
-PY_SIBLINGS=(pd-book-tools)
+PY_SIBLINGS=(pdomain-book-tools)
 NPM_SIBLINGS=()
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -2,21 +2,21 @@
 
 **Date:** 2026-05-21
 **Status:** Accepted
-**Issue:** ConcaveTrillion/pd-ocr-training#2
+**Issue:** pdomain/pdomain-ocr-training#2
 
 ## Context
 
-`ITrainingRunner` exposes only training entry points.  pd-ocr-trainer-spa M7
+`ITrainingRunner` exposes only training entry points.  pdomain-ocr-trainer-spa M7
 (models registry + eval) proved that the consumer needs an eval round-trip:
 its `worker/evaluate.py` runs a single forward pass and returns overall metrics
 plus a per-slice breakdown.  The production `_build_runner()` path raised a
-clear not-implemented error because pd-ocr-training had no eval API.
+clear not-implemented error because pdomain-ocr-training had no eval API.
 
 ## Decision
 
 Add a sibling `IEvalRunner` Protocol alongside `ITrainingRunner`.  Keep
 `ITrainingRunner` training-only (Single-Responsibility Principle).  Mirror the
-multi-Protocol pattern from `pd-ocr-ops`
+multi-Protocol pattern from `pdomain-ocr-ops`
 (`StageDispatcher` / `LongJobRunner`).
 
 ## Options considered
@@ -39,7 +39,7 @@ objects directly.  This avoids the thread-queue bridge machinery entirely.
 
 ## Result shape
 
-Result objects carry fields aligned with the pd-ocr-trainer-spa M7 worker
+Result objects carry fields aligned with the pdomain-ocr-trainer-spa M7 worker
 shapes so the adapter mapping is trivial:
 
 - **`RecognitionEvalResult`**: `cer`, `wer`, `exact_match_rate`, `slices`,
@@ -59,7 +59,7 @@ handle (log, surface in the API response, etc.).
 
 ## Torch-free contract
 
-`LocalEvalRunner` imports only from `pd_ocr_training.protocols` (via
+`LocalEvalRunner` imports only from `pdomain_ocr_training.protocols` (via
 `TYPE_CHECKING`) -- no torch/DocTR at module import time.  The two stub entry
 points (`evaluate_detection_from_config` / `evaluate_recognition_from_config`)
 raise `NotImplementedError` as placeholders until the real DocTR eval wrappers
@@ -69,7 +69,7 @@ the base (torch-free) install, unlike `LocalTrainingRunner` which drags in
 
 ## Consequences
 
-- `pd-ocr-trainer-spa` M7 can now inject a real `IEvalRunner` instead of a
+- `pdomain-ocr-trainer-spa` M7 can now inject a real `IEvalRunner` instead of a
   stub; the adapter maps `LocalEvalRunner.evaluate_recognition(profile, cfg)`
   to its existing result schema.
 - M12 (typeface classifier) and M13 (glyph eval slicing) can populate

@@ -1,6 +1,6 @@
-"""Verify the torch-free import contract of ``pd_ocr_training``.
+"""Verify the torch-free import contract of ``pdomain_ocr_training``.
 
-A downstream web process (``pd-ocr-trainer-spa``) installs the base package
+A downstream web process (``pdomain-ocr-trainer-spa``) installs the base package
 without the ``[train]`` extra and must be able to import the typed config
 models and the ``ITrainingRunner`` Protocol without dragging in torch / DocTR.
 
@@ -47,14 +47,14 @@ def _run(body: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_base_import_succeeds_without_torch() -> None:
-    """``import pd_ocr_training`` works and does not pull torch into sys.modules."""
+    """``import pdomain_ocr_training`` works and does not pull torch into sys.modules."""
     result = _run(
         """
-        import pd_ocr_training
+        import pdomain_ocr_training
 
         assert "torch" not in sys.modules, "torch was imported by base package"
         assert "doctr" not in sys.modules, "doctr was imported by base package"
-        assert pd_ocr_training.__version__ == "0.2.1"
+        assert pdomain_ocr_training.__version__ == "0.2.1"
         print("OK")
         """
     )
@@ -66,7 +66,7 @@ def test_torch_free_public_names_importable() -> None:
     """The torch-free public surface imports without the training stack."""
     result = _run(
         """
-        from pd_ocr_training import (
+        from pdomain_ocr_training import (
             DetectionConfig,
             DetectionEvalConfig,
             DetectionEvalResult,
@@ -110,12 +110,12 @@ def test_local_runner_access_raises_helpful_error_without_torch() -> None:
     """Accessing LocalTrainingRunner without torch raises a guiding ImportError."""
     result = _run(
         """
-        import pd_ocr_training
+        import pdomain_ocr_training
 
         try:
-            pd_ocr_training.LocalTrainingRunner
+            pdomain_ocr_training.LocalTrainingRunner
         except ImportError as exc:
-            assert "pd-ocr-training[train]" in str(exc), str(exc)
+            assert "pdomain-ocr-training[train]" in str(exc), str(exc)
             print("OK")
         else:
             raise AssertionError("expected ImportError for LocalTrainingRunner")
@@ -136,9 +136,9 @@ def test_local_eval_runner_importable_without_torch() -> None:
     """
     result = _run(
         """
-        import pd_ocr_training
+        import pdomain_ocr_training
 
-        runner_cls = pd_ocr_training.LocalEvalRunner
+        runner_cls = pdomain_ocr_training.LocalEvalRunner
         assert runner_cls is not None, "LocalEvalRunner should be importable without torch"
         assert "torch" not in sys.modules, "torch was imported by LocalEvalRunner"
         print("OK")
@@ -150,13 +150,13 @@ def test_local_eval_runner_importable_without_torch() -> None:
 
 def test_local_runner_importable_with_train_stack() -> None:
     """With the [train] extra installed, LocalTrainingRunner resolves normally."""
-    from pd_ocr_training import LocalTrainingRunner
+    from pdomain_ocr_training import LocalTrainingRunner
 
     assert LocalTrainingRunner is not None
 
 
 def test_local_eval_runner_importable_with_train_stack() -> None:
     """With the [train] extra installed, LocalEvalRunner resolves normally."""
-    from pd_ocr_training import LocalEvalRunner
+    from pdomain_ocr_training import LocalEvalRunner
 
     assert LocalEvalRunner is not None

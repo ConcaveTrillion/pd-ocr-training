@@ -1,4 +1,4 @@
-from pd_ocr_training.utils import EarlyStopper
+from pdomain_ocr_training.utils import EarlyStopper
 
 
 def test_early_stopper_resets_counter_on_improvement() -> None:

@@ -1,4 +1,4 @@
-"""Tests for the eval Protocol and models in pd_ocr_training.protocols.
+"""Tests for the eval Protocol and models in pdomain_ocr_training.protocols.
 
 Covers:
 - Eval config models (DetectionEvalConfig, RecognitionEvalConfig)
@@ -9,7 +9,7 @@ Covers:
 
 import pytest
 
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training.protocols import (
     DetectionEvalConfig,
     DetectionEvalResult,
     EvalSlice,

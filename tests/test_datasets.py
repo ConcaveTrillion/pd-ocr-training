@@ -1,8 +1,8 @@
-"""Behavioural tests for pd_ocr_training.datasets (ExportManager + helpers)."""
+"""Behavioural tests for pdomain_ocr_training.datasets (ExportManager + helpers)."""
 
 import json
 
-import pd_ocr_training.datasets as ds
+import pdomain_ocr_training.datasets as ds
 
 
 def test_export_manager_discovers_profile_via_training_dir(tmp_path, monkeypatch):

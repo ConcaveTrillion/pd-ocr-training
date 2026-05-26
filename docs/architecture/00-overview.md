@@ -1,18 +1,18 @@
-# Architecture: pd-ocr-training
+# Architecture: pdomain-ocr-training
 
 **Status:** Current as of 2026-05-22 (IEvalRunner + LocalEvalRunner shipped).
 
 ## Purpose
 
-`pd-ocr-training` owns all torch/DocTR OCR model-training and evaluation code
+`pdomain-ocr-training` owns all torch/DocTR OCR model-training and evaluation code
 for the `pd-*` suite. No other `pd-*` repo imports torch. Consumers (currently
-the future `pd-ocr-trainer-spa`) depend only on the typed Protocols, never on
+the future `pdomain-ocr-trainer-spa`) depend only on the typed Protocols, never on
 concrete training modules.
 
 ## Module layout
 
 ```text
-pd_ocr_training/
+pdomain_ocr_training/
     __init__.py      Public API re-exports (lazy for LocalTrainingRunner)
     protocols.py     ITrainingRunner + IEvalRunner Protocols; all config + result models
     local.py         LocalTrainingRunner — callback→generator bridge
@@ -26,12 +26,12 @@ pd_ocr_training/
 ## Install modes
 
 ```bash
-pip install pd-ocr-training          # Torch-free base
-pip install 'pd-ocr-training[train]' # Adds torch / DocTR / matplotlib
+pip install pdomain-ocr-training          # Torch-free base
+pip install 'pdomain-ocr-training[train]' # Adds torch / DocTR / matplotlib
 ```
 
 The base install exposes all typed models, both Protocols, and `LocalEvalRunner`.
-`LocalTrainingRunner` is available lazily — `import pd_ocr_training` never
+`LocalTrainingRunner` is available lazily — `import pdomain_ocr_training` never
 imports torch; accessing `LocalTrainingRunner` without `[train]` raises a clear
 `ImportError`.
 
@@ -44,7 +44,7 @@ returns `Iterator[TrainingEvent]`. `LocalTrainingRunner` bridges the legacy
 DocTR callback-style training loops into that iterator via a thread + Queue.
 
 ```text
-pd-ocr-trainer-spa                pd-ocr-training
+pdomain-ocr-trainer-spa                pdomain-ocr-training
 ─────────────────       inject        ─────────────────────
 ITrainingRunner  ◄──────────────── LocalTrainingRunner
                                         │
@@ -65,7 +65,7 @@ The Protocol returns result objects directly. `LocalEvalRunner` delegates to
 module-level stub entry points that can be monkeypatched in tests.
 
 ```text
-pd-ocr-trainer-spa                pd-ocr-training
+pdomain-ocr-trainer-spa                pdomain-ocr-training
 ─────────────────       inject        ─────────────────────
 IEvalRunner      ◄──────────────── LocalEvalRunner
                                         │

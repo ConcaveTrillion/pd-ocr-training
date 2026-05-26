@@ -38,13 +38,13 @@ lint-check: ## Read-only ruff format+check (no auto-fix; matches CI exactly)
 	uv run ruff check .
 
 format: ## Format code
-	uv run ruff format pd_ocr_training tests
+	uv run ruff format pdomain_ocr_training tests
 
 format-check: ## Check formatting only (ruff format --check, no lint)
-	uv run ruff format --check pd_ocr_training tests
+	uv run ruff format --check pdomain_ocr_training tests
 
 typecheck: ## Run basedpyright at recommended mode (workspace canonical)
-	uv run basedpyright pd_ocr_training --level error
+	uv run basedpyright pdomain_ocr_training --level error
 
 test: ## Run tests with parallelization
 	uv run pytest -n auto

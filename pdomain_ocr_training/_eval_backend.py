@@ -62,7 +62,7 @@ import os
 import time
 from typing import TYPE_CHECKING, NotRequired, Protocol, TypedDict, cast
 
-from pd_ocr_training.protocols import (
+from pdomain_ocr_training.protocols import (
     DetectionEvalResult,
     EvalSlice,
     GlyphFeatureSet,
@@ -72,7 +72,7 @@ from pd_ocr_training.protocols import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
-    from pd_ocr_training.protocols import (
+    from pdomain_ocr_training.protocols import (
         DetectionEvalConfig,
         RecognitionEvalConfig,
     )
