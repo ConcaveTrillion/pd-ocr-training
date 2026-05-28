@@ -124,6 +124,9 @@ change any step below.
   process skills first (`brainstorming`, `systematic-debugging`,
   `writing-plans`, `test-driven-development`), then implementation skills.
   If a skill applies, using it is not optional.
+- **Write clearly.** Follow `docs/process/writing-style.md` for direct user
+  updates, handoffs, final summaries, docs, reports, issue text, PR text, and
+  user-facing copy. Keep agent communication short, clear, and easy to scan.
 - **Delegate by default.** Dispatch subagents for non-trivial work: per-repo
   agents for repo changes, `Explore` for code searches. This keeps large tool
   output out of the parent context.
