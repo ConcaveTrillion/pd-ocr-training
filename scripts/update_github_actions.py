@@ -19,6 +19,7 @@ MANAGED_ACTIONS = (
     "actions/checkout",
     "astral-sh/setup-uv",
     "actions/setup-python",
+    "actions/setup-node",
     "actions/upload-artifact",
     "actions/download-artifact",
     "peter-evans/create-pull-request",
