@@ -2,7 +2,7 @@
 # Shared release driver for pdomain Python repos.
 #
 # Repo-local scripts/do-release.sh files configure these variables, then call
-# pd_release_main:
+# pdomain_release_main:
 #   RELEASE_REPO              owner/repo, used only for final release URL text
 #   RELEASE_BRANCH            release branch, defaults to main
 #   RELEASE_PREFLIGHT         command run before tagging, defaults to make ci-slow
@@ -11,7 +11,7 @@
 
 set -eu
 
-pd_release_main() {
+pdomain_release_main() {
     BUMP=${BUMP:-minor}
     FORCE=${FORCE:-0}
     SKIP_PUSH=${SKIP_PUSH:-0}
@@ -69,7 +69,7 @@ pd_release_main() {
         uv version --bump "$BUMP"
         VERSION="v$(uv version --short)"
     else
-        VERSION=$(pd_next_tag_from_git_tags "$BUMP")
+        VERSION=$(pdomain_next_tag_from_git_tags "$BUMP")
     fi
 
     if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
@@ -124,7 +124,7 @@ pd_release_main() {
     fi
 }
 
-pd_next_tag_from_git_tags() {
+pdomain_next_tag_from_git_tags() {
     bump=$1
     latest=$(git tag --list 'v[0-9]*' --sort=-version:refname \
         | grep -E '^v[0-9]+(\.[0-9]+){0,2}$' \

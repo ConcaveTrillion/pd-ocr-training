@@ -1,4 +1,4 @@
-"""DocTR OCR model training pipeline for the pd-* OCR suite.
+"""DocTR OCR model training pipeline for the pdomain-* OCR suite.
 
 Two install modes
 -----------------

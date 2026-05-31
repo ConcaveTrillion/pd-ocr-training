@@ -376,7 +376,7 @@ class EvalSlice(BaseModel):
 
     A slice breaks down overall metrics by a binary feature (e.g. italic,
     drop-cap, bold, header) to surface whether the model performs worse on
-    documents with that feature present.  Downstream consumers (pd-ocr-trainer-
+    documents with that feature present.  Downstream consumers (pdomain-ocr-trainer-
     spa M12 / M13) can render slices in a comparison table.
 
     Attributes:

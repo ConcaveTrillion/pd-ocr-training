@@ -12,7 +12,7 @@ GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-com
 CANONICAL_REPO_ROOT="$(dirname "$GIT_COMMON_DIR")"
 WORKSPACE_ROOT="$(dirname "$CANONICAL_REPO_ROOT")"
 # Marker lives in the canonical repo's .venv (shared across worktrees).
-MARKER="$CANONICAL_REPO_ROOT/.venv/.pd-local-mode"
+MARKER="$CANONICAL_REPO_ROOT/.venv/.pdomain-local-mode"
 
 say() { echo "$*"; }
 

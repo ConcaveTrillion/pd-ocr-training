@@ -5,7 +5,7 @@
 ## Purpose
 
 `pdomain-ocr-training` owns all torch/DocTR OCR model-training and evaluation code
-for the `pd-*` suite. No other `pd-*` repo imports torch. Consumers (currently
+for the `pdomain-*` suite. No other `pdomain-*` repo imports torch. Consumers (currently
 the future `pdomain-ocr-trainer-spa`) depend only on the typed Protocols, never on
 concrete training modules.
 

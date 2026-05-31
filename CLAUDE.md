@@ -1,12 +1,12 @@
 # CLAUDE — pdomain-ocr-training
 
-DocTR OCR model training pipeline (detection + recognition) for the `pd-*`
+DocTR OCR model training pipeline (detection + recognition) for the `pdomain-*`
 suite. Extracted from the legacy `pd-ocr-trainer` repo.
 
 ## Why a separate package
 
 `torch` and `DocTR` are heavy ML dependencies. Isolating them here keeps every
-other `pd-*` SPA backend torch-free. Only the future `pdomain-ocr-trainer-spa`
+other `pdomain-*` SPA backend torch-free. Only the future `pdomain-ocr-trainer-spa`
 depends on this package.
 
 ## Install modes — torch is an optional extra
@@ -79,13 +79,13 @@ make build          # uv build
 make clean          # rm dist .venv .pytest_cache .ruff_cache .ci-ai.log htmlcov
 
 # local-dev workflow (spec #362) — see ../docs/process/local-dev.md
-make local-setup        # clone any missing sibling pd-* repos
+make local-setup        # clone any missing sibling pdomain-* repos
 make local-dev          # switch to local-dev mode (editable ../pdomain-book-tools + marker)
 make local-check        # print local-dev mode + per-sibling resolution
 make local-upgrade-deps # upgrade deps then restore editables (local-mode only)
 
-# sibling-dep refresh (spec #363) — see ../docs/process/update-pd-deps.md
-make update-pd-deps     # bump pd-* sibling deps to registry latest; leaves diff for review
+# sibling-dep refresh (spec #363) — see ../docs/process/update-pdomain-deps.md
+make update-pdomain-deps # bump pdomain-* sibling deps to registry latest; leaves diff for review
 ```
 
 Run any command with `uv run` directly if preferred:

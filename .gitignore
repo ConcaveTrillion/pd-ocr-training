@@ -99,4 +99,4 @@ cython_debug/
 .worktrees/
 
 # local-dev mode marker (written by make local-dev, spec #362)
-.venv/.pd-local-mode
+.venv/.pdomain-local-mode

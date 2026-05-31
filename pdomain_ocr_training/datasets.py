@@ -20,8 +20,8 @@ ML_TRAINING_DIR = Path(os.getenv("PD_OCR_TRAINER_ML_TRAINING_DIR", PROJECT_ROOT 
 ML_VALIDATION_DIR = Path(
     os.getenv("PD_OCR_TRAINER_ML_VALIDATION_DIR", PROJECT_ROOT / "ml-validation")
 )
-APP_NAME = "pd-ocr-labeler"
-MODEL_STORE_DIRNAME = "pd-ml-models"
+APP_NAME = "pdomain-ocr-labeler-spa"
+MODEL_STORE_DIRNAME = "pdomain-ml-models"
 MODEL_NAME_PREFIX = "pd"
 BASE_OCR_PROFILE = "all"
 LEGACY_BASE_OCR_PROFILE = "base-ocr"
@@ -240,7 +240,7 @@ def migrate_legacy_dataset_layout() -> None:
 
 
 class ExportManager:
-    """Manages pd-ocr-labeler DocTR export assignments for training."""
+    """Manages pdomain-ocr-labeler-spa DocTR export assignments for training."""
 
     def __init__(self) -> None:
         self.active_profile = normalize_profile_name(BASE_OCR_PROFILE)
@@ -259,7 +259,7 @@ class ExportManager:
 
     @staticmethod
     def get_export_root() -> Path:
-        """OS-aware path to the pd-ocr-labeler DocTR export root."""
+        """OS-aware path to the pdomain-ocr-labeler-spa DocTR export root."""
         return APP_DATA_ROOT / "doctr-export"
 
     def scan(self) -> None:

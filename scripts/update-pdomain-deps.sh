@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# scripts/update-pd-deps.sh — bump all sibling pd-* deps to registry latest.
+# scripts/update-pdomain-deps.sh — bump all sibling pdomain-* deps to registry latest.
 #
 # Queries pdomain-index-pip (Python) and pdomain-index-npm (npm) for each sibling,
 # updates minimum-version pins in pyproject.toml and frontend/package.json,
 # then leaves the diff staged for human review. Does NOT commit.
 #
-# Auto-flips around local-dev mode if the .venv/.pd-local-mode marker is set.
+# Auto-flips around local-dev mode if the .venv/.pdomain-local-mode marker is set.
 # Idempotent: prints "✓ <name> already at <version>" if already at latest.
 #
-# Usage: make update-pd-deps   (or ./scripts/update-pd-deps.sh directly)
+# Usage: make update-pdomain-deps   (or ./scripts/update-pdomain-deps.sh directly)
 set -euo pipefail
 
 # ─── Repo-specific config (edit per-repo during M3–M9 rollout) ───────────────
@@ -21,9 +21,9 @@ PD_INDEX_NPM="https://pdomain.github.io/pdomain-index-npm"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)"
 CANONICAL_REPO_ROOT="$(dirname "$GIT_COMMON_DIR")"
-MARKER="$CANONICAL_REPO_ROOT/.venv/.pd-local-mode"
+MARKER="$CANONICAL_REPO_ROOT/.venv/.pdomain-local-mode"
 
-say() { echo "[update-pd-deps] $*"; }
+say() { echo "[update-pdomain-deps] $*"; }
 
 # ─── Step 1: Detect local-dev mode ───────────────────────────────────────────
 LOCAL_DEV_ACTIVE=false
@@ -215,4 +215,4 @@ say "─────────────────────────
 say "Review the diff above, then commit:"
 say "  git diff -- pyproject.toml uv.lock frontend/package.json frontend/pnpm-lock.yaml"
 say "  git add pyproject.toml uv.lock frontend/package.json frontend/pnpm-lock.yaml"
-say "  git commit -m 'chore: bump pd-* sibling deps to registry latest'"
+say "  git commit -m 'chore: bump pdomain-* sibling deps to registry latest'"

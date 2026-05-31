@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# scripts/local-setup.sh — clone missing pd-* sibling repos into the workspace.
+# scripts/local-setup.sh — clone missing pdomain-* sibling repos into the workspace.
 #
 # Idempotent: skips siblings that already exist.
 # Does NOT switch the repo into local-dev mode (use `make local-dev` for that).
 set -euo pipefail
 
-# Repo-specific: list of sibling pd-* GitHub repo names this repo depends on.
+# Repo-specific: list of sibling pdomain-* GitHub repo names this repo depends on.
 SIBLINGS=(pdomain-book-tools)
 
 # Workspace root = parent of the canonical git repo dir (works in both normal checkouts and worktrees).

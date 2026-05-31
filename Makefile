@@ -17,7 +17,7 @@ else
         pre-commit-check upgrade-deps \
         local-setup local-dev local-check local-upgrade-deps \
         dev-local \
-        update-pd-deps \
+        update-pdomain-deps \
         release-patch release-minor release-major _do-release ci-slow
 
 help: ## Show this help message
@@ -78,12 +78,12 @@ dev-local: ## DEPRECATED: use local-dev
 
 # ─── sibling-dep refresh (spec #363) ─────────────────────────────────────────
 
-update-pd-deps: ## Bump pd-* sibling deps to registry latest; leaves diff for review
-	@./scripts/update-pd-deps.sh
+update-pdomain-deps: ## Bump pdomain-* sibling deps to registry latest; leaves diff for review
+	@./scripts/update-pdomain-deps.sh
 
 # ─── local-dev workflow (spec #362) ──────────────────────────────────────────
 
-local-setup: ## Clone any missing sibling pd-* repos into the workspace
+local-setup: ## Clone any missing sibling pdomain-* repos into the workspace
 	@./scripts/local-setup.sh
 
 local-dev: ## Switch to local-dev mode (siblings editable + marker)

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pdomain-ocr-training"
 dynamic = ["version"]
-description = "DocTR OCR model training pipeline for the pd-* OCR suite"
+description = "DocTR OCR model training pipeline for the pdomain-* OCR suite"
 authors = [{ name = "CT", email = "concavetrillion@gmail.com" }]
 readme = "README.md"
 license = { text = "MIT" }

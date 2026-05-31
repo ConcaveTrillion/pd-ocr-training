@@ -86,7 +86,7 @@ jobs:
             exit 0
           fi
           gh api -X POST /repos/pdomain/pdomain-index-pip/dispatches \
-            -f event_type=pd-release-published \
+            -f event_type=pdomain-release-published \
             -F 'client_payload[repo]=pdomain-ocr-training' \
             -F "client_payload[tag]=$RELEASE_TAG" || \
             echo "::warning::pdomain-index-pip dispatch failed; index will catch up via daily cron"

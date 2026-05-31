@@ -1,8 +1,8 @@
 # pdomain-ocr-training
 
-DocTR OCR model training and evaluation pipeline for the `pd-*` OCR suite.
+DocTR OCR model training and evaluation pipeline for the `pdomain-*` OCR suite.
 
-This package owns all torch/DocTR training code — detection and recognition model fine-tuning, dataset management, model export, and evaluation. Isolating torch here keeps every other `pd-*` SPA backend (e.g. `pdomain-ocr-labeler-spa`, `pdomain-prep-for-pgdp`) torch-free and deployment-lightweight.
+This package owns all torch/DocTR training code — detection and recognition model fine-tuning, dataset management, model export, and evaluation. Isolating torch here keeps every other `pdomain-*` SPA backend (e.g. `pdomain-ocr-labeler-spa`, `pdomain-prep-for-pgdp`) torch-free and deployment-lightweight.
 
 Supersedes the legacy `pd-ocr-trainer` repo.
 
