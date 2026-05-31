@@ -121,9 +121,26 @@ def update_workflow_refs(path: Path, *, releases: dict[str, ActionRelease]) -> b
     return True
 
 
+def update_pyproject_uv_version(path: Path, *, version: str) -> bool:
+    """Update [tool.uv] required-version in pyproject.toml. Returns True if changed."""
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8")
+    updated = re.sub(
+        r'(required-version\s*=\s*")[^"]+(")',
+        rf"\g<1>{version}\g<2>",
+        text,
+    )
+    if updated == text:
+        return False
+    path.write_text(updated, encoding="utf-8")
+    return True
+
+
 def update_github_actions(
     *,
     workflow_dir: Path = WORKFLOW_DIR,
+    pyproject: Path | None = None,
     runner: GhRunner = run_gh,
 ) -> list[Path]:
     """Refresh managed action refs and uv version, return changed workflow paths."""
@@ -135,6 +152,9 @@ def update_github_actions(
             changed.add(path)
         if update_uv_version_refs(path, version=uv_version):
             changed.add(path)
+    pyproject_path = pyproject if pyproject is not None else ROOT / "pyproject.toml"
+    if update_pyproject_uv_version(pyproject_path, version=uv_version):
+        changed.add(pyproject_path)
     return sorted(changed)
 
 
