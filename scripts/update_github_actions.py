@@ -79,6 +79,32 @@ def latest_release(action: str, *, runner: GhRunner = run_gh) -> ActionRelease:
     return ActionRelease(tag=tag, sha=sha)
 
 
+def latest_uv_version(*, runner: GhRunner = run_gh) -> str:
+    """Return the latest uv release version string (e.g. '0.11.17')."""
+    release = gh_json("repos/astral-sh/uv/releases/latest", runner=runner)
+    tag = release.get("tag_name")
+    if not isinstance(tag, str):
+        raise TypeError("latest uv release did not include tag_name")
+    version = tag.lstrip("v")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise ValueError(f"unexpected uv release tag: {tag}")
+    return version
+
+
+def update_uv_version_refs(path: Path, *, version: str) -> bool:
+    """Update the uv version string inside setup-uv with: blocks. Returns True if changed."""
+    text = path.read_text(encoding="utf-8")
+    updated = re.sub(
+        r'(uses:\s+astral-sh/setup-uv@[^\n]+\n\s+with:\n\s+version:\s+")[^"]+(")',
+        rf"\g<1>{version}\g<2>",
+        text,
+    )
+    if updated == text:
+        return False
+    path.write_text(updated, encoding="utf-8")
+    return True
+
+
 def update_workflow_refs(path: Path, *, releases: dict[str, ActionRelease]) -> bool:
     """Update managed action refs in one workflow file. Returns True if changed."""
     text = path.read_text(encoding="utf-8")
@@ -100,13 +126,16 @@ def update_github_actions(
     workflow_dir: Path = WORKFLOW_DIR,
     runner: GhRunner = run_gh,
 ) -> list[Path]:
-    """Refresh managed action refs and return changed workflow paths."""
+    """Refresh managed action refs and uv version, return changed workflow paths."""
     releases = {a: latest_release(a, runner=runner) for a in MANAGED_ACTIONS}
-    return [
-        path
-        for path in sorted(workflow_dir.glob("*.yml"))
-        if update_workflow_refs(path, releases=releases)
-    ]
+    uv_version = latest_uv_version(runner=runner)
+    changed: set[Path] = set()
+    for path in sorted(workflow_dir.glob("*.yml")):
+        if update_workflow_refs(path, releases=releases):
+            changed.add(path)
+        if update_uv_version_refs(path, version=uv_version):
+            changed.add(path)
+    return sorted(changed)
 
 
 def main() -> int:
